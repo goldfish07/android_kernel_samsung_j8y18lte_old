@@ -51,10 +51,6 @@
 #include <linux/compat.h>
 #include "compat_qseecom.h"
 
-#ifdef CONFIG_QSEECOM_DEBUG
-#include <linux/sched_clock.h>
-#endif
-
 #define QSEECOM_DEV			"qseecom"
 #define QSEOS_VERSION_14		0x14
 #define QSEEE_VERSION_00		0x400000
@@ -200,9 +196,6 @@ struct qseecom_registered_app_list {
 	u32  app_arch;
 	bool app_blocked;
 	u32  blocked_on_listener_id;
-#ifdef CONFIG_QSEECOM_DEBUG
-	u64 load_time;
-#endif	
 };
 
 struct qseecom_registered_kclient_list {
@@ -385,103 +378,7 @@ static int qseecom_free_ce_info(struct qseecom_dev_handle *data,
 						void __user *argp);
 static int qseecom_query_ce_info(struct qseecom_dev_handle *data,
 						void __user *argp);
-#ifdef CONFIG_QSEECOM_DEBUG
-static unsigned int max_loaded_app_num;
-static unsigned int min_heap_avail = UINT_MAX;
 
-static int check_tzheap_available(void);
-
-static int qseecom_debug_show(struct seq_file *s, void *data)
-{
-	unsigned int num = 0;
-	unsigned long flags;
-	int tz_heap_avail;
-
-	struct qseecom_registered_app_list *ptr_app;
-	u64 cur_time = sched_clock();
-
-	seq_puts(s, "Current Secure Apps info\n");
-	seq_puts(s, "id\tref\tname\tt_load\tt_run\tarch\tblocked\tblocked_on_listener_id\n");
-
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
-
-	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head, list) {
-		seq_printf(s, "%d\t%d\t%s\t%lld\t%lld\t%d\t%d\t%d\n",
-			ptr_app->app_id, ptr_app->ref_cnt, ptr_app->app_name,
-			ptr_app->load_time, cur_time - ptr_app->load_time,
-			ptr_app->app_arch, ptr_app->app_blocked,
-			ptr_app->blocked_on_listener_id);
-		num++;
-	}
-
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
-
-	tz_heap_avail = check_tzheap_available();
-
-	if (tz_heap_avail < 0) {
-		pr_err("failed to get tzbsp heap available size = %d\n", tz_heap_avail);
-		return -1;
-	}
-
-	if (tz_heap_avail < min_heap_avail)
-		min_heap_avail = tz_heap_avail;
-
-	seq_printf(s, "available : %d (min : %d) loaded apps : %u (max : %u)\n",
-		tz_heap_avail, min_heap_avail, num , max_loaded_app_num);
-
-	return 0;
-}
-
-static int qseecom_debug_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, qseecom_debug_show, inode->i_private);
-}
-
-static const struct file_operations qseecom_debug_fops = {
-	.open = qseecom_debug_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static int qseecom_update_info(bool log)
-{
-	unsigned int num = 0;
-	unsigned long flags;
-	int tz_heap_avail;
-	struct qseecom_registered_app_list *ptr_app;
-
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
-
-	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head, list) {
-		if (log)
-			pr_info("%d : %s (%lld)\n", ptr_app->app_id, ptr_app->app_name, ptr_app->load_time);
-		num++;
-	}
-
-	if (num > max_loaded_app_num)
-		max_loaded_app_num = num;
-
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
-
-	tz_heap_avail = check_tzheap_available();
-
-	if (tz_heap_avail < 0) {
-		pr_err("failed to get tzbsp heap available size = %d\n", tz_heap_avail);
-		return -1;
-	}
-
-	if (tz_heap_avail < min_heap_avail)
-		min_heap_avail = tz_heap_avail;
-
-	
-	pr_info("available : %d (min : %d) loaded apps : %u (max : %u)\n",
-		tz_heap_avail, min_heap_avail, num , max_loaded_app_num);
-
-	return num;
-}
-#endif
-						
 static int get_qseecom_keymaster_status(char *str)
 {
 	get_option(&str, &qseecom.is_apps_region_protected);
@@ -608,15 +505,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 			kzfree(tzbuf);
 			break;
 		}
-#ifdef CONFIG_QSEECOM_DEBUG
-		case QSEOS_GET_TZHEAP_STATUS_COMMAND: {
-			smc_id = TZ_OS_APP_GET_TZHEAP_STATUS_ID;
-			desc.arginfo = TZ_OS_APP_GET_TZHEAP_STATUS_ID_PARAM_ID;
-			__qseecom_reentrancy_check_if_no_app_blocked(smc_id);
-			ret = scm_call2(smc_id, &desc);
-			break;
-		}
-#endif		
 		case QSEOS_APP_REGION_NOTIFICATION: {
 			struct qsee_apps_region_info_ireq *req;
 			struct qsee_apps_region_info_64bit_ireq *req_64bit;
@@ -2366,51 +2254,6 @@ static int __qseecom_check_app_exists(struct qseecom_check_app_ireq req,
 	}
 }
 
-#ifdef CONFIG_QSEECOM_DEBUG
-static int __qseecom_get_tzbsp_heap_status(struct qseecom_get_tzheap_status_ireq req, uint32_t *data)
-{
-	int32_t ret = 0;
-	struct qseecom_command_scm_resp resp;
-
-	memset((void *)&resp, 0, sizeof(resp));
-
-	/*  SCM_CALL to get tzheap status */
-	ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1, &req,
-				sizeof(struct qseecom_get_tzheap_status_ireq),
-				&resp, sizeof(resp));
-	if (ret) {
-		pr_err("scm_call to get tzheap status failed\n");
-		return -EINVAL;
-	}
-
-	if (resp.result == QSEOS_RESULT_FAILURE)
-		return -EINVAL;
-	else {
-		*data = resp.data;
-		return 0;
-	}
-}
-
-static int32_t check_tzheap_available(void)
-{
-	int32_t ret;
-	struct qseecom_get_tzheap_status_ireq req;
-	uint32_t data;
-
-	req.qsee_cmd_id = QSEOS_GET_TZHEAP_STATUS_COMMAND;
-	ret = __qseecom_get_tzbsp_heap_status(req, &data);
-	if (ret)
-		pr_err("failed in getting tzbheap\n");
-
-	else {
-		pr_debug("tzheap : free bytes = 0x%08X\n", data);
-		ret = data;
-	}
-
-	return ret;
-}
-#endif
-
 static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 {
 	struct qseecom_registered_app_list *entry = NULL;
@@ -2615,9 +2458,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		/* Deallocate the handle */
 		if (!IS_ERR_OR_NULL(ihandle))
 			ion_free(qseecom.ion_clnt, ihandle);
-#ifdef CONFIG_QSEECOM_DEBUG
-		entry->load_time = sched_clock();
-#endif
+
 		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_add_tail(&entry->list, &qseecom.registered_app_list_head);
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
@@ -2655,9 +2496,6 @@ enable_clk_err:
 		qseecom_unregister_bus_bandwidth_needs(data);
 		mutex_unlock(&qsee_bw_mutex);
 	}
-#ifdef CONFIG_QSEECOM_DEBUG
-	qseecom_update_info(ret);
-#endif	
 	return ret;
 }
 
@@ -2814,9 +2652,6 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 unload_exit:
 	qseecom_unmap_ion_allocated_memory(data);
 	data->released = true;
-#ifdef CONFIG_QSEECOM_DEBUG
-	qseecom_update_info(ret);
-#endif	
 	return ret;
 }
 
@@ -4713,9 +4548,6 @@ int qseecom_start_app(struct qseecom_handle **handle,
 		entry->app_arch = app_arch;
 		entry->app_blocked = false;
 		entry->blocked_on_listener_id = 0;
-#ifdef CONFIG_QSEECOM_DEBUG
-		entry->load_time = sched_clock();
-#endif		
 		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_add_tail(&entry->list, &qseecom.registered_app_list_head);
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
@@ -5625,9 +5457,6 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 				MAX_APP_NAME_SIZE);
 			entry->app_blocked = false;
 			entry->blocked_on_listener_id = 0;
-#ifdef CONFIG_QSEECOM_DEBUG
-			entry->load_time = sched_clock();
-#endif			
 			spin_lock_irqsave(&qseecom.registered_app_list_lock,
 				flags);
 			list_add_tail(&entry->list,
@@ -8641,9 +8470,7 @@ static int qseecom_probe(struct platform_device *pdev)
 	struct msm_bus_scale_pdata *qseecom_platform_support = NULL;
 	struct qseecom_command_scm_resp resp;
 	struct qseecom_ce_info_use *pce_info_use = NULL;
-#ifdef CONFIG_QSEECOM_DEBUG
-	struct dentry *dir;
-#endif
+
 	qseecom.qsee_bw_count = 0;
 	qseecom.qsee_perf_client = 0;
 	qseecom.qsee_sfpb_bw_count = 0;
@@ -8899,23 +8726,6 @@ static int qseecom_probe(struct platform_device *pdev)
 		pr_err("Unable to register bus client\n");
 
 	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_READY);
-
-#ifdef CONFIG_QSEECOM_DEBUG
-
-	dir = debugfs_create_dir("qseecom", NULL);
-	if (!dir) {
-		pr_err("failed to create debugfs dir\n");
-		goto exit_debugfs;
-	}
-	if (!debugfs_create_file("app_info", 0440, dir, &qseecom, &qseecom_debug_fops)) {
-		pr_err("failed to create debugfs file\n");
-		debugfs_remove_recursive(dir);
-		goto exit_debugfs;
-	}
-	pr_info("created debugfs file\n");
-
-exit_debugfs:
-#endif	
 	return 0;
 
 exit_deinit_clock:

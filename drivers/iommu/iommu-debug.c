@@ -1288,21 +1288,19 @@ static ssize_t iommu_debug_attach_read(struct file *file, char __user *ubuf,
 {
 	struct iommu_debug_device *ddev = file->private_data;
 	char c[2];
-	size_t buflen = sizeof(c);
 
 	if (*offset)
 		return 0;
 
 	c[0] = ddev->domain ? '1' : '0';
 	c[1] = '\n';
-	buflen = min(count, buflen);
-	if (copy_to_user(ubuf, &c, buflen)) {
+	if (copy_to_user(ubuf, &c, 2)) {
 		pr_err("copy_to_user failed\n");
 		return -EFAULT;
 	}
 	*offset = 1;		/* non-zero means we're done */
 
-	return buflen;
+	return 2;
 }
 
 static const struct file_operations iommu_debug_attach_fops = {

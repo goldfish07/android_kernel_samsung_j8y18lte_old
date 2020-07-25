@@ -1979,7 +1979,7 @@ in_rq_range(struct usb_function *fn, const struct usb_ctrlrequest *cr)
 	u16 w_value = le16_to_cpu(cr->wValue);
 	u8 entity_id = (w_index >> 8) & 0xff;
 	u8 control_selector = w_value >> 8;
-	struct CNTRL_RANGE_LAY3(CLK_FREQ_ARR_SIZE) r;
+	struct cntrl_range_lay3 r;
 	int value = -EOPNOTSUPP;
 	int p_srate, c_srate;
 

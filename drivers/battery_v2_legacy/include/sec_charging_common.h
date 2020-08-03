@@ -845,8 +845,8 @@ struct sec_battery_platform_data {
 	int p_mux_channel;
 	int batt_channel;
 
-#if defined(CONFIG_BATTERY_CISD)
 	unsigned int battery_full_capacity;
+#if defined(CONFIG_BATTERY_CISD)
 	unsigned int cisd_cap_high_thr;
 	unsigned int cisd_cap_low_thr;
 	unsigned int cisd_cap_limit;

@@ -24,7 +24,6 @@
 #include <linux/blkdev.h>
 #include <asm/byteorder.h>
 #include <linux/ratelimit.h>
-#include <linux/android_aid.h>
 
 #include "ext4.h"
 #include "ext4_jbd2.h"
@@ -691,18 +690,13 @@ out:
 static inline int ext4_has_free_inodes(struct ext4_sb_info *sbi)
 {
 	if (likely(percpu_counter_read_positive(&sbi->s_freeinodes_counter) >
-			sbi->s_r_inodes_count * 2))
-		return 1;
-
-	if (percpu_counter_read_positive(&sbi->s_freeinodes_counter) >
-			sbi->s_r_inodes_count &&
-			in_group_p(AID_USE_SEC_RESERVED))
+			sbi->s_r_inodes_count))
 		return 1;
 
 	/* Hm, nope.  Are (enough) root reserved inodes available? */
 	if (uid_eq(sbi->s_resuid, current_fsuid()) ||
 	    (!gid_eq(sbi->s_resgid, GLOBAL_ROOT_GID) && in_group_p(sbi->s_resgid)) ||
-	    capable(CAP_SYS_RESOURCE) || in_group_p(AID_USE_ROOT_RESERVED))
+	    capable(CAP_SYS_RESOURCE))
 		return 1;
 	return 0;
 }
@@ -1111,7 +1105,7 @@ fail_drop:
 	unlock_new_inode(inode);
 out:
 	if (err == -ENOSPC) {
-		printk_ratelimited(KERN_INFO "Return ENOSPC : No free inode (%d/%u)\n",
+		printk_ratelimited(KERN_INFO "Return ENOSPC: ifree=%d, inodes=%u\n",
 			(int) percpu_counter_read_positive(&sbi->s_freeinodes_counter),
 			le32_to_cpu(sbi->s_es->s_inodes_count));
 	}
@@ -1314,8 +1308,8 @@ int ext4_init_inode_table(struct super_block *sb, ext4_group_t group,
 
 	if ((used_blks < 0) || (used_blks > sbi->s_itb_per_group) ||
 	    ((group == 0) && ((EXT4_INODES_PER_GROUP(sb) -
-			       ext4_itable_unused_count(sb, gdp)) <
-			      EXT4_FIRST_INO(sb)))) {
+			      ext4_itable_unused_count(sb, gdp)) <
+			      EXT4_FIRST_INO(sb))))  {
 		ext4_error(sb, "Something is wrong with group %u: "
 			   "used itable blocks: %d; "
 			   "itable unused count: %u",

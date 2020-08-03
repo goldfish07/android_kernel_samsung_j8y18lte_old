@@ -26,6 +26,7 @@ Copyright (C) 2012, Samsung Electronics. All rights reserved.
  * You should have received a copy of the GNU General Public License
  *
 */
+#include <linux/cpufreq.h>
 #include "ss_dsi_panel_S6E3FA7_AMS604NL01.h"
 #include "ss_dsi_mdnie_S6E3FA7_AMS604NL01.h"
 #include "../../mdss_dsi.h"
@@ -1455,6 +1456,517 @@ static void mdss_panel_multires(struct samsung_display_driver_data *vdd)
 }
 #endif
 
+static int poc_comp_table[] = {
+		/*idx	cd */
+	0x1A,	/*0 	2 */
+	0x1A,	/*1 	3 */
+	0x1A,	/*2 	4 */
+	0x1A,	/*3 	5 */
+	0x1A,	/*4 	6 */
+	0x1A,	/*5 	7 */
+	0x1A,	/*6 	8 */
+	0x1A,	/*7 	9 */
+	0x1A,	/*8 	10 */
+	0x1A,	/*9 	11 */
+	0x1A,	/*10	12 */
+	0x1A,	/*11	13 */
+	0x1A,	/*12	14 */
+	0x1A,	/*13	15 */
+	0x1B,	/*14	16 */
+	0x1B,	/*15	17 */
+	0x1C,	/*16	19 */
+	0x1D,	/*17	20 */
+	0x1D,	/*18	21 */
+	0x1E,	/*19	22 */
+	0x1F,	/*20	24 */
+	0x1F,	/*21	25 */
+	0x20,	/*22	27 */
+	0x21,	/*23	29 */
+	0x22,	/*24	30 */
+	0x23,	/*25	32 */
+	0x24,	/*26	34 */
+	0x25,	/*27	37 */
+	0x26,	/*28	39 */
+	0x27,	/*29	41 */
+	0x29,	/*30	44 */
+	0x2A,	/*31	47 */
+	0x2C,	/*32	50 */
+	0x2D,	/*33	53 */
+	0x2F,	/*34	56 */
+	0x31,	/*35	60 */
+	0x33,	/*36	64 */
+	0x37,	/*37	68 */
+	0x3C,	/*38	72 */
+	0x42,	/*39	77 */
+	0x48,	/*40	82 */
+	0x4F,	/*41	87 */
+	0x56,	/*42	93 */
+	0x5C,	/*43	98 */
+	0x61,	/*44	105*/
+	0x64,	/*45	111*/
+	0x69,	/*46	119*/
+	0x6D,	/*47	126*/
+	0x71,	/*48	134*/
+	0x76,	/*49	143*/
+	0x7B,	/*50	152*/
+	0x80,	/*51	162*/
+	0x85,	/*52	172*/
+	0x8B,	/*53	183*/
+	0x91,	/*54	195*/
+	0x97,	/*55	207*/
+	0x9D,	/*56	220*/
+	0xA3,	/*57	234*/
+	0xAA,	/*58	249*/
+	0xB2,	/*59	265*/
+	0xBB,	/*60	282*/
+	0xC6,	/*61	300*/
+	0xCF,	/*62	316*/
+	0xD9,	/*63	333*/
+	0xE1,	/*64	350*/
+	0xE4,	/*65	357*/
+	0xE7,	/*66	365*/
+	0xEB,	/*67	372*/
+	0xEE,	/*68	380*/
+	0xF1,	/*69	387*/
+	0xF5,	/*70	395*/
+	0xF8,	/*71	403*/
+	0xFC,	/*72	412*/
+	0xFF,	/*73	420*/
+	0xFF,	/*74	hbm*/
+};
+
+static void poc_comp(struct samsung_display_driver_data *vdd)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct dsi_panel_cmds *poc_comp_cmds = NULL;
+
+	int ndx = 0;
+	int cd_idx = 0;
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd\n");
+		return;
+	}
+
+	ctrl_pdata = vdd->ctrl_dsi[DISPLAY_1];
+	poc_comp_cmds = get_panel_tx_cmds(ctrl_pdata, TX_POC_COMP);
+
+	if (is_hbm_level(vdd, ndx))
+		cd_idx = (ARRAY_SIZE(poc_comp_table) - 1);
+	else
+		cd_idx = vdd->cd_idx;
+
+	LCD_INFO("cd_idx (%d) val (%02x)\n", cd_idx, poc_comp_table[cd_idx]);
+
+	poc_comp_cmds->cmds[4].payload[1] = poc_comp_table[cd_idx];
+
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_COMP);
+
+	return;
+}
+
+static int poc_erase(struct samsung_display_driver_data *vdd, u32 erase_pos, u32 erase_size, u32 target_pos)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct dsi_panel_cmds *poc_erase_sector_tx_cmds = NULL;
+	struct cpufreq_policy *policy;
+	int cpu;
+
+	int delay_us = 0;
+	int image_size = 0;
+	int ret  = 0;
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd\n");
+		return -EINVAL;
+	}
+
+	ctrl_pdata = vdd->ctrl_dsi[DISPLAY_1];
+	if (IS_ERR_OR_NULL(ctrl_pdata)) {
+		LCD_ERR("ctrl_pdata is null \n");
+		return -EINVAL;
+	}
+
+	if (vdd->poc_driver.erase_sector_addr_idx[0] < 0) {
+		LCD_ERR("sector addr index is not implemented.. %d\n", vdd->poc_driver.erase_sector_addr_idx[0]);
+		return -EINVAL;
+	}
+
+	poc_erase_sector_tx_cmds = get_panel_tx_cmds(ctrl_pdata, TX_POC_ERASE_SECTOR);
+	image_size = vdd->poc_driver.image_size;
+	delay_us   = vdd->poc_driver.erase_delay_us;
+
+	if (erase_size == POC_ERASE_64KB) {
+		delay_us = 1000000;
+		poc_erase_sector_tx_cmds->cmds[2].payload[2] = 0xD8;
+	} else if (erase_size == POC_ERASE_32KB) {
+		delay_us = 800000;
+		poc_erase_sector_tx_cmds->cmds[2].payload[2] = 0x52;
+	} else {
+		delay_us = 400000;
+		poc_erase_sector_tx_cmds->cmds[2].payload[2] = 0x20;
+	}
+
+	LCD_INFO("[ERASE] (%6d / %6d), erase_size (%d), delay %dus\n", erase_pos, target_pos, erase_size, delay_us);
+
+	/* MAX CPU ON */
+	mutex_lock(&vdd->vdd_poc_operation_lock);
+	vdd->poc_operation = true;
+
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+				policy->user_policy.min = 1900800;
+				cpufreq_update_policy(cpu);
+				cpufreq_cpu_put(policy);
+			}
+		}
+	}
+
+	put_online_cpus();
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, true);
+
+	/* POC MODE ENABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_ENABLE);
+
+	LCD_INFO("WRITE [TX_POC_PRE_ERASE_SECTOR]");
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_PRE_ERASE_SECTOR);
+
+	poc_erase_sector_tx_cmds->cmds[2].payload[vdd->poc_driver.erase_sector_addr_idx[0]] = (erase_pos & 0xFF0000) >> 16;
+	poc_erase_sector_tx_cmds->cmds[2].payload[vdd->poc_driver.erase_sector_addr_idx[1]] = (erase_pos & 0x00FF00) >> 8;
+	poc_erase_sector_tx_cmds->cmds[2].payload[vdd->poc_driver.erase_sector_addr_idx[2]] = erase_pos & 0x0000FF;
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_ERASE_SECTOR);
+	usleep_range(delay_us, delay_us);
+
+	if ((erase_pos + erase_size >= target_pos) || ret == -EIO) {
+		LCD_INFO("WRITE [TX_POC_POST_ERASE_SECTOR] - cur_erase_pos(%d) target_pos(%d) ret(%d)\n", erase_pos, target_pos, ret);
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_POST_ERASE_SECTOR);
+	}
+
+	/* POC MODE DISABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_DISABLE);
+
+	/* MAX CPU OFF */
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, false);
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+			policy->user_policy.min = 300000;
+			cpufreq_update_policy(cpu);
+			cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	put_online_cpus();
+	vdd->poc_operation = false;
+	mutex_unlock(&vdd->vdd_poc_operation_lock);
+
+	return ret;
+}
+
+static int poc_write(struct samsung_display_driver_data *vdd, u8 *data, u32 write_pos, u32 write_size)
+{
+	struct dsi_panel_cmds *write_cmd = NULL;
+	struct dsi_panel_cmds *write_data_add = NULL;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct cpufreq_policy *policy;
+	int cpu;
+
+	int pos, ret = 0;
+	int last_pos, delay_us, image_size, loop_cnt, poc_w_size = 0;
+	int tx_size = 0;
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd\n");
+		return -EINVAL;
+	}
+
+	ctrl_pdata = vdd->ctrl_dsi[DISPLAY_1];
+	if (IS_ERR_OR_NULL(ctrl_pdata)) {
+		LCD_ERR("ctrl_pdata is null \n");
+		return -EINVAL;
+	}
+
+	write_cmd = get_panel_tx_cmds(ctrl_pdata, TX_POC_WRITE_LOOP_1BYTE);
+	write_data_add = get_panel_tx_cmds(ctrl_pdata, TX_POC_WRITE_LOOP_DATA_ADD);
+
+	if (vdd->poc_driver.write_addr_idx[0] < 0) {
+		LCD_ERR("write addr index is not implemented.. %d\n", vdd->poc_driver.write_addr_idx[0]);
+		return -EINVAL;
+	}
+
+	delay_us   = vdd->poc_driver.write_delay_us; /* Panel dtsi set */
+	image_size = vdd->poc_driver.image_size;
+	last_pos   = write_pos + write_size;
+	poc_w_size = vdd->poc_driver.write_data_size;
+	loop_cnt   = vdd->poc_driver.write_loop_cnt;
+
+	LCD_INFO("[WRITE] write_pos : %6d, write_size : %6d, last_pos %6d, poc_w_sise : %d delay %dus\n",
+		write_pos, write_size, last_pos, poc_w_size, delay_us);
+
+	/* MAX CPU ON */
+	mutex_lock(&vdd->vdd_poc_operation_lock);
+	vdd->poc_operation = true;
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+				policy->user_policy.min = 1900800;
+				cpufreq_update_policy(cpu);
+				cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	put_online_cpus();
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, true);
+
+	/* POC MODE ENABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_ENABLE);
+
+	if (write_pos == 0) {
+		LCD_INFO("WRITE [TX_POC_PRE_WRITE]");
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_PRE_WRITE);
+	}
+
+	for (pos = write_pos; pos < last_pos; ) {
+		if (!(pos % DEBUG_POC_CNT))
+			LCD_INFO("cur_write_pos : %d data : 0x%x\n", pos, data[pos]);
+
+		if (unlikely(atomic_read(&vdd->poc_driver.cancel))) {
+			LCD_ERR("cancel poc write by user\n");
+			ret = -EIO;
+			goto cancel_poc;
+		}
+
+		if (pos % loop_cnt == 0) {
+			if (pos > 0) {
+				LCD_DEBUG("WRITE_LOOP_END pos : %d \n", pos);
+				mdss_samsung_send_cmd(ctrl_pdata, TX_POC_WRITE_LOOP_END);
+			}
+
+			LCD_DEBUG("WRITE_LOOP_START pos : %d \n", pos);
+			mdss_samsung_send_cmd(ctrl_pdata, TX_POC_WRITE_LOOP_START);
+
+			usleep_range(delay_us, delay_us);
+
+			/* Multi Data Address */
+			write_data_add->cmds[0].payload[vdd->poc_driver.write_addr_idx[0]] = (pos & 0xFF0000) >> 16;
+			write_data_add->cmds[0].payload[vdd->poc_driver.write_addr_idx[1]] = (pos & 0x00FF00) >> 8;
+			write_data_add->cmds[0].payload[vdd->poc_driver.write_addr_idx[2]] = (pos & 0x0000FF);
+
+			mdss_samsung_send_cmd(ctrl_pdata, TX_POC_WRITE_LOOP_DATA_ADD);
+		}
+
+		/* 1 Byte Write */
+		tx_size = poc_w_size;
+
+		/* data copy */
+		write_cmd->cmds[0].payload[1] = data[pos];
+
+		if (mdss_samsung_send_cmd(ctrl_pdata, TX_POC_WRITE_LOOP_1BYTE)) {
+			ret = -EIO;
+			goto cancel_poc;
+		}
+		usleep_range(delay_us, delay_us);
+
+		pos += tx_size;
+	}
+
+cancel_poc:
+	if (unlikely(atomic_read(&vdd->poc_driver.cancel))) {
+		LCD_ERR("cancel poc write by user\n");
+		atomic_set(&vdd->poc_driver.cancel, 0);
+		ret = -EIO;
+	}
+
+	if (pos == image_size || ret == -EIO) {
+		LCD_DEBUG("WRITE_LOOP_END pos : %d \n", pos);
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_WRITE_LOOP_END);
+
+		LCD_INFO("WRITE [TX_POC_POST_WRITE] - image_size(%d) cur_write_pos(%d) ret(%d)\n", image_size, pos, ret);
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_POST_WRITE);
+	}
+
+	/* POC MODE DISABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_DISABLE);
+
+	/* MAX CPU OFF */
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, false);
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+			policy->user_policy.min = 300000;
+			cpufreq_update_policy(cpu);
+			cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	put_online_cpus();
+	vdd->poc_operation = false;
+	mutex_unlock(&vdd->vdd_poc_operation_lock);
+
+	return ret;
+}
+
+#define read_buf_size 1
+static int poc_read(struct samsung_display_driver_data *vdd, u8 *buf, u32 read_pos, u32 read_size)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct cpufreq_policy *policy;
+	int cpu;
+
+	struct dsi_panel_cmds *poc_read_tx_cmds = NULL;
+	struct dsi_panel_cmds *poc_read_rx_cmds = NULL;
+	int delay_us;
+	int image_size;
+	u8 rx_buf[read_buf_size];
+	int pos;
+	int ret = 0;
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd\n");
+		return -EINVAL;
+	}
+
+	ctrl_pdata = vdd->ctrl_dsi[DISPLAY_1];
+	if (IS_ERR_OR_NULL(ctrl_pdata)) {
+		LCD_ERR("ctrl_pdata is null \n");
+		return -EINVAL;
+	}
+
+	poc_read_tx_cmds = get_panel_tx_cmds(ctrl_pdata, TX_POC_READ);
+	poc_read_rx_cmds = get_panel_rx_cmds(ctrl_pdata, RX_POC_READ);
+
+	if (vdd->poc_driver.read_addr_idx[0] < 0) {
+		LCD_ERR("read addr index is not implemented.. %d\n",
+			vdd->poc_driver.read_addr_idx[0]);
+		return -EINVAL;
+	}
+
+	delay_us = vdd->poc_driver.read_delay_us; /* Panel dtsi set */
+	image_size = vdd->poc_driver.image_size;
+
+	LCD_INFO("[READ] read_pos : %6d, read_size : %6d, delay %dus\n", read_pos, read_size, delay_us);
+
+	/* MAX CPU ON */
+	mutex_lock(&vdd->vdd_poc_operation_lock);
+	vdd->poc_operation = true;
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+				policy->user_policy.min = 1900800;
+				cpufreq_update_policy(cpu);
+				cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	put_online_cpus();
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, true);
+
+	/* For sending direct rx cmd  */
+	poc_read_rx_cmds->cmds[0].payload = rx_buf;
+	poc_read_rx_cmds->link_state = DSI_HS_MODE;
+
+	/* POC MODE ENABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_ENABLE);
+
+	/* Before read poc data, need to read mca (only for B0) */
+	if (read_pos == 0) {
+		if (vdd->poc_driver.check_read_case) {
+			if (vdd->poc_driver.read_case == READ_CASE1) {
+				LCD_INFO("WRITE [TX_POC_PRE_READ]");
+				mdss_samsung_send_cmd(ctrl_pdata, TX_POC_PRE_READ);
+			} else if (vdd->poc_driver.read_case == READ_CASE2) {
+				LCD_INFO("WRITE [TX_POC_PRE_READ2]");
+				mdss_samsung_send_cmd(ctrl_pdata, TX_POC_PRE_READ2);
+			}
+		} else {
+			LCD_INFO("WRITE [TX_POC_PRE_READ]");
+			mdss_samsung_send_cmd(ctrl_pdata, TX_POC_PRE_READ);
+		}
+	}
+
+	for (pos = read_pos; pos < (read_pos + read_size); pos++) {
+		if (unlikely(atomic_read(&vdd->poc_driver.cancel))) {
+			LCD_ERR("cancel poc read by user\n");
+			ret = -EIO;
+			goto cancel_poc;
+		}
+		poc_read_tx_cmds->cmds[0].payload[vdd->poc_driver.read_addr_idx[0]] = (pos & 0xFF0000) >> 16;
+		poc_read_tx_cmds->cmds[0].payload[vdd->poc_driver.read_addr_idx[1]] = (pos & 0x00FF00) >> 8;
+		poc_read_tx_cmds->cmds[0].payload[vdd->poc_driver.read_addr_idx[2]] = pos & 0x0000FF;
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_READ);
+		usleep_range(delay_us, delay_us);
+		mdss_samsung_send_cmd(ctrl_pdata, RX_POC_READ);
+
+		buf[pos] = rx_buf[0];
+
+		if (!(pos % DEBUG_POC_CNT))
+			LCD_INFO("buf[%d] = 0x%x\n", pos, buf[pos]);
+	}
+
+cancel_poc:
+	if (unlikely(atomic_read(&vdd->poc_driver.cancel))) {
+		LCD_ERR("cancel poc read by user\n");
+		atomic_set(&vdd->poc_driver.cancel, 0);
+		ret = -EIO;
+	}
+
+	if (pos == image_size || ret == -EIO) {
+		LCD_INFO("WRITE [TX_POC_POST_READ] - image_size(%d) cur_read_pos(%d) ret(%d)\n", image_size, pos, ret);
+		mdss_samsung_send_cmd(ctrl_pdata, TX_POC_POST_READ);
+	}
+
+	/* POC MODE DISABLE */
+	mdss_samsung_send_cmd(ctrl_pdata, TX_POC_DISABLE);
+
+	/* MAX CPU OFF */
+	mdss_dsi_samsung_poc_perf_mode_ctl(ctrl_pdata, false);
+	get_online_cpus();
+	for_each_online_cpu(cpu) {
+		if (cpu < 4) {
+			policy = cpufreq_cpu_get(cpu);
+			if (policy) {
+			policy->user_policy.min = 300000;
+			cpufreq_update_policy(cpu);
+			cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	put_online_cpus();
+	vdd->poc_operation = false;
+	mutex_unlock(&vdd->vdd_poc_operation_lock);
+
+	return ret;
+}
+
+/*
+ * check 5th 6th value of ECh every sleep out
+ * need to save values because these values could be reset after manual read.
+ */
+static int check_read_case(struct samsung_display_driver_data *vdd)
+{
+	ss_poc_read_mca(vdd);
+
+	if (vdd->poc_driver.mca_data[4] == 0x00 &&
+		vdd->poc_driver.mca_data[5] == 0x00) {
+		LCD_INFO("FLASH READ_CASE1\n");
+		return READ_CASE1;
+	} else {
+		LCD_INFO("FLASH READ_CASE2\n");
+		return READ_CASE2;
+	}
+}
+
 static void mdss_panel_init(struct samsung_display_driver_data *vdd)
 {
 	pr_info("%s", __func__);
@@ -1566,6 +2078,13 @@ static void mdss_panel_init(struct samsung_display_driver_data *vdd)
 		vdd->self_disp.operation[FLAG_SELF_DCLK].img_size = ARRAY_SIZE(self_dclock_img_data);
 		make_self_dispaly_img_cmds(TX_SELF_DCLOCK_IMAGE, FLAG_SELF_DCLK);
 	}
+
+	/* POC */
+	vdd->poc_driver.poc_erase = poc_erase;
+	vdd->poc_driver.poc_write = poc_write;
+	vdd->poc_driver.poc_read = poc_read;
+	vdd->poc_driver.poc_comp = poc_comp;
+	vdd->poc_driver.check_read_case = check_read_case;
 
 	return;
 }

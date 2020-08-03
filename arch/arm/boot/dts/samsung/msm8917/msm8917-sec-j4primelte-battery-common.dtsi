@@ -115,6 +115,7 @@
 		battery,mivr_voltage = <1>; /* 0:  4200, 1 : 4300, 2 : 4400 ..... 7: 4900 */
 
 		battery,cisd_max_voltage_thr = <5000>;
+		battery,battery_full_capacity = <3300>;
 
 		/* cycle(week), chg_float_voltage, recharge_condition_vcell, full_condition_vcell, full_condition_soc*/
 		battery,age_data = <0 4350 4250 4250 93	/*4.35*/
@@ -163,7 +164,7 @@
 			fuelgauge,capacity_max_margin = <200>;
 			fuelgauge,capacity_min = <0>;
 			fuelgauge,capacity_calculation_type = <28>;
-			fuelgauge,capacity_full = <5000>; /* battery capacity */
+			fuelgauge,capacity_full = <3300>; /* battery capacity */
 			fuelgauge,type_str = "SDI";
 			fuelgauge,model_type = <1>;
 			fuelgauge,fg_log_enable = <1>;

@@ -233,6 +233,8 @@
 
 #define DBMDX_NO_EXT_DETECTION_MODE_PARAMS	0x0000
 
+#define DBMDX_WAKELOCK_IRQ_TIMEOUT_MS		5000
+
 struct chip_interface;
 
 enum dbmdx_firmware_active {
@@ -414,6 +416,10 @@ struct dbmdx_private {
 	struct dbmdx_platform_data		*pdata;
 	/* lock for private data */
 	struct mutex			p_lock;
+#ifdef CONFIG_PM_WAKELOCKS
+	struct wakeup_source		ps_nosuspend_wl;
+#endif
+
 	enum dbmdx_firmware_active	active_fw;
 	enum dbmdx_firmware_active	active_fw_va_chip;
 	enum dbmdx_power_modes		power_mode;

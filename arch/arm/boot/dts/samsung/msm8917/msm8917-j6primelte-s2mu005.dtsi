@@ -49,7 +49,6 @@
 				muic,uart_txd = "gpb1-1";
 				new_factory;
 				dcd_timeout;
-				undefined_range;
 			};
 		};
 		s2mu005_fled {

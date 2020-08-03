@@ -1076,7 +1076,7 @@ static void sm5708_aicl_work(struct work_struct *work)
 	struct sm5708_charger_data *charger =
 		container_of(work, struct sm5708_charger_data, aicl_work.work);
 	int prev_current_max, max_count, now_count = 0;
-
+	bool aicl_on = false;
 
 	if (!sm5708_charger_get_charging_on_status(charger)) {
 
@@ -1091,10 +1091,11 @@ static void sm5708_aicl_work(struct work_struct *work)
 	prev_current_max = charger->input_current;
 	while (_check_aicl_state(charger) && (now_count++ < max_count)) {
 		_reduce_input_limit_current(charger, REDUCE_CURRENT_STEP);
+		aicl_on = true;
 		msleep(AICL_VALID_CHECK_DELAY_TIME);
 	}
 
-	if (_check_aicl_state(charger)) {
+	if (aicl_on) {
 		union power_supply_propval value;
 		value.intval = sm5708_CHG_get_INPUT_LIMIT(charger);
 		psy_do_property("battery", set,
@@ -1210,21 +1211,20 @@ static irqreturn_t sm5708_chg_vbus_in_isr(int irq, void *data)
 static irqreturn_t sm5708_chg_otgfail_isr(int irq, void *data)
 {
 	struct sm5708_charger_data *charger = data;
-	unsigned char reg_data;
 
 #ifdef CONFIG_USB_HOST_NOTIFY
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
+
+	/* Because of Auto reboosting by OTGFAIL irq, just disable boosting manually
+	   without checking OTGFAIL status bit */
 	pr_info("IRQ=%d : OTG Failed\n", irq);
 
-	sm5708_read_reg(charger->i2c, SM5708_REG_STATUS3, &reg_data);
-	if (reg_data & (1 << 2)) {
-		pr_info("otg overcurrent limit\n");
 #ifdef CONFIG_USB_HOST_NOTIFY
-		send_otg_notify(o_notify, NOTIFY_EVENT_OVERCURRENT, 0);
+	send_otg_notify(o_notify, NOTIFY_EVENT_OVERCURRENT, 0);
 #endif
-		psy_chg_set_charge_otg_control(charger, false);
-	}
+	psy_chg_set_charge_otg_control(charger, false);
+
 	return IRQ_HANDLED;
 }
 

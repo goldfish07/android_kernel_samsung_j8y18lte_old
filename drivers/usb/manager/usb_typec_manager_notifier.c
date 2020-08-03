@@ -439,7 +439,7 @@ void handle_muic_fake_event(int event)
 		case EVENT_LOAD:
 			if(typec_manager.muic_attach_state_without_ccic
 				|| typec_manager.ccic_drp_state == USB_STATUS_NOTIFY_ATTACH_UFP) {
-				schedule_delayed_work(&typec_manager.vbus_noti_work, msecs_to_jiffies(1000));
+				schedule_delayed_work(&typec_manager.vbus_noti_work, msecs_to_jiffies(1500));
 				typec_manager.muic_fake_event_wq_processing = 1;
 			}
 			break;

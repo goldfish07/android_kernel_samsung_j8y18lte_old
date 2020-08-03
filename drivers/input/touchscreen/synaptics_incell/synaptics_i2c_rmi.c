@@ -3422,8 +3422,11 @@ static int synaptics_rmi4_set_input_device(struct synaptics_rmi4_data *rmi4_data
 
 	rmi4_data->input_dev->id.bustype = BUS_I2C;
 	rmi4_data->input_dev->dev.parent = &rmi4_data->i2c_client->dev;
+
+#ifndef CONFIG_FB
 	rmi4_data->input_dev->open = synaptics_rmi4_input_open;
 	rmi4_data->input_dev->close = synaptics_rmi4_input_close;
+#endif
 
 	input_set_drvdata(rmi4_data->input_dev, rmi4_data);
 #ifdef GLOVE_MODE

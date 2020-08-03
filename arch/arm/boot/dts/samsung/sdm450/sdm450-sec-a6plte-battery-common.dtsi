@@ -248,7 +248,7 @@
 		battery0,v_alarm = <3200>;
 		battery0,v_max_table = <0x225A 0x2235 0x220F 0x21EA 0x218D>;
 		battery0,q_max_table = <0x1B6B 0x1B09 0x1AA6 0x1A44 0x194D>;
-		battery0,data_ver = <0x01>;
+		battery0,data_ver = <0x02>;
 	};
 
 /* sec_battery_cable

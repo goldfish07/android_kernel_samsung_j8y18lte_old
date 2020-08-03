@@ -45,6 +45,15 @@
 #include <linux/of_gpio.h>
 #endif /* CONFIG_OF */
 
+
+#if defined(CONFIG_BATTERY_SAMSUNG_V2)
+#include "../../battery_v2/include/sec_charging_common.h"
+#elif defined(CONFIG_BATTERY_SAMSUNG_V2_LEGACY)
+#include "../../battery_v2_legacy/include/sec_charging_common.h"
+#else
+#include <linux/battery/sec_charging_common.h>
+#endif
+
 #include "muic-internal.h"
 #include "muic_apis.h"
 #include "muic_i2c.h"
@@ -79,6 +88,31 @@ void muic_set_wakeup_noti(int flag)
 	muic_wakeup_noti = flag;
 }
 
+int muic_get_otg_property(void)
+{
+	struct power_supply *psy_otg;
+	union power_supply_propval val;
+	int ret = 0;
+
+	pr_info("%s %d\n", __func__, __LINE__);
+	psy_otg = power_supply_get_by_name("otg");
+	if (psy_otg) {
+		val.intval = 0;
+		ret = psy_otg->get_property(psy_otg, POWER_SUPPLY_PROP_ONLINE, &val);
+	} else {
+		pr_err("%s: Fail to get psy battery\n", __func__);
+		return (-1);
+	}
+	pr_info("%s:%s val.intval=%d\n", MUIC_DEV_NAME, __func__, val.intval);
+
+	if (val.intval) {
+		ret = 1;		
+	} else {
+		ret = 0;
+	}
+	return ret;
+}
+
 static void muic_handle_attach(muic_data_t *pmuic,
 			muic_attached_dev_t new_dev, int adc, u8 vbvolt)
 {
@@ -88,7 +122,9 @@ static void muic_handle_attach(muic_data_t *pmuic,
 	struct vendor_ops *pvendor = pmuic->regmapdesc->vendorops;
 
 	/* W/A of sm5703 lanhub issue */
-	if ((new_dev == ATTACHED_DEV_OTG_MUIC) && (vbvolt > 0)) {
+	if ( ((new_dev == ATTACHED_DEV_OTG_MUIC)
+		|| ( (new_dev == ATTACHED_DEV_USB_MUIC) && ( muic_get_otg_property() == 1) ) )
+		&& (vbvolt > 0)) {
 		if (pvendor && pvendor->reset_vbus_path) {
 			pr_info("%s:%s reset vbus path\n", MUIC_DEV_NAME, __func__);
 			pvendor->reset_vbus_path(pmuic->regmapdesc);
@@ -545,6 +581,16 @@ void muic_detect_dev(muic_data_t *pmuic)
 		MUIC_DEV_NAME, __func__, new_dev, intr);
 
 #if defined(CONFIG_MUIC_SUPPORT_CCIC)
+	if ( (muic_get_otg_property() == 1)
+		&& (pmuic->intr.intr2 == 0x80)
+		&& (pmuic->vps.s.vbvolt > 0 ) ) {
+		if (pvendor && pvendor->reset_vbus_path) {
+			pr_info("%s:%s reset vbus path\n", MUIC_DEV_NAME, __func__);
+			pvendor->reset_vbus_path(pmuic->regmapdesc);
+		} else
+			pr_info("%s: No Vendor API ready.\n", __func__);
+	}
+
 	if (pvendor->get_dcdtmr_irq) {
 		dcd = pvendor->get_dcdtmr_irq(pmuic->regmapdesc);
 		pr_info("%s:%s: get dcd timer state: %s\n",

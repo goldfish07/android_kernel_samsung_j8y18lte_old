@@ -300,8 +300,8 @@ static void dsi_update_mdnie_data(void)
 		mdnie_data.dsi1_white_default_g = 0xff;
 		mdnie_data.dsi1_white_default_b = 0xff;
 		mdnie_data.dsi1_white_rgb_enabled = 0;
-		mdnie_data.dsi0_scr_step_index = MDNIE_STEP1_INDEX;
-		mdnie_data.dsi1_scr_step_index = MDNIE_STEP1_INDEX;
+		mdnie_data.dsi0_scr_step_index = MDNIE_STEP2_INDEX;
+		mdnie_data.dsi1_scr_step_index = MDNIE_STEP2_INDEX;
 }
 
 static void mdss_panel_init(struct samsung_display_driver_data *vdd)

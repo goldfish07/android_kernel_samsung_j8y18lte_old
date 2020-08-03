@@ -35,7 +35,7 @@
 DEFINE_MUTEX(STATUS_CHANGE);
 /* For Hall ic panel reset funtion */
 DEFINE_MUTEX(LP_STOP_MODE_LOCK);
-extern unsigned int is_boot_recovery;
+//extern unsigned int is_boot_recovery; /* not use */
 #endif
 
 #define DT_CMD_HDR 6
@@ -3285,6 +3285,7 @@ u32 mdss_samsung_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
 {
 	struct dcs_cmd_req cmdreq;
 	struct mdss_panel_info *pinfo;
+	struct samsung_display_driver_data *vdd = samsung_get_vdd();
 
 	pinfo = &(ctrl->panel_data.panel_info);
 	if (pinfo->dcs_cmd_by_left) {
@@ -3296,6 +3297,9 @@ u32 mdss_samsung_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
 	cmdreq.cmds = pcmds->cmds;
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
+
+	if (vdd->poc_operation)
+		cmdreq.flags |=CMD_REQ_DMA_TPG;
 
 	if (read_size)
 		cmdreq.rlen = read_size;

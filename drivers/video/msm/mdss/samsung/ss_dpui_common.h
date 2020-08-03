@@ -78,12 +78,16 @@ enum dpui_key {
 	DPUI_KEY_PNVLO3E,	/* panel VLOUT3 error count */
 	DPUI_KEY_PNESDE,	/* panel ESD error count */
 	DPUI_KEY_PNSDRE,	/* panel OTP loading error count */
-#ifdef CONFIG_SUPPORT_POC_FLASH
 	DPUI_KEY_PNPOCT,	/* panel POC try count */
 	DPUI_KEY_PNPOCF,	/* panel POC fail count */
 	DPUI_KEY_PNPOCI,	/* panel POC image index */
 	DPUI_KEY_PNPOCI_ORG,	/* panel POC image index in factory */
-#endif
+	DPUI_KEY_PNPOC_ER_TRY,	/* panel POC erase try count */
+	DPUI_KEY_PNPOC_ER_FAIL,	/* panel POC erase fail count */
+	DPUI_KEY_PNPOC_WR_TRY,	/* panel POC write try count */
+	DPUI_KEY_PNPOC_WR_FAIL,	/* panel POC write fail count */
+	DPUI_KEY_PNPOC_RD_TRY,	/* panel POC read try count */
+	DPUI_KEY_PNPOC_RD_FAIL,	/* panel POC read fail count */
 	/* dependent on processor */
 	DPUI_KEY_QCT_DSIE,	/* display controller dsi error count */
 	DPUI_KEY_QCT_PPTO,	/* display controller pingpong timeout count */

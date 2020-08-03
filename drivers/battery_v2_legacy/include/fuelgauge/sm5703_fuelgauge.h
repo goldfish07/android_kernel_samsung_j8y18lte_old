@@ -172,6 +172,9 @@ struct sec_fuelgauge_info {
 
 	unsigned int capacity_old;	/* only for atomic calculation */
 	unsigned int capacity_max;	/* only for dynamic calculation */
+	unsigned int raw_capacity;
+	int capacity_full;
+	
 #if defined(CONFIG_BATTERY_AGE_FORECAST)
 	unsigned int chg_float_voltage; /* BATTERY_AGE_FORECAST */
 #endif

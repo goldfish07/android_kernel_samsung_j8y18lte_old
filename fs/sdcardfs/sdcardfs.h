@@ -46,7 +46,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/ratelimit.h>
-#include <linux/android_aid.h>
 #include "multiuser.h"
 
 /* the file system name */
@@ -222,8 +221,11 @@ struct sdcardfs_mount_options {
 	gid_t fs_low_gid;
 	userid_t fs_user_id;
 	bool multiuser;
+	bool gid_derivation;
 	bool default_normal;
+	bool unshared_obb;
 	unsigned int reserved_mb;
+	bool nocache;
 };
 
 struct sdcardfs_vfsmount_options {
@@ -626,8 +628,7 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 
 	if (uid_eq(GLOBAL_ROOT_UID, current_fsuid()) ||
 			capable(CAP_SYS_RESOURCE) ||
-			in_group_p(AID_USE_ROOT_RESERVED) ||
-			in_group_p(AID_USE_SEC_RESERVED))
+			in_group_p(AID_USE_ROOT_RESERVED))
 		return 1;
 
 	if (sbi->options.reserved_mb) {
@@ -714,11 +715,6 @@ static inline bool str_n_case_eq(const char *s1, const char *s2, size_t len)
 static inline bool qstr_case_eq(const struct qstr *q1, const struct qstr *q2)
 {
 	return q1->len == q2->len && str_n_case_eq(q1->name, q2->name, q2->len);
-}
-
-static inline bool qstr_n_case_eq(const struct qstr *q1, const struct qstr *q2)
-{
-	return q1->len == q2->len && str_n_case_eq(q1->name, q2->name, q1->len);
 }
 
 /* */

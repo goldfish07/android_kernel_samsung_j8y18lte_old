@@ -1154,6 +1154,12 @@ int mdss_samsung_send_cmd(struct mdss_dsi_ctrl_pdata *ctrl, enum mipi_samsung_tx
 		return 0;
 	}
 
+	pcmds = mdss_samsung_cmds_select(ctrl, cmd, &flags);
+	if (IS_ERR_OR_NULL(pcmds)) {
+		LCD_INFO("no panel_cmds...\n");
+		return 0;
+	}
+
 	/*
 		Any dsi TX or RX operation is not permitted while poc operation.
 		1. Whole POC related cmds use CMD_REQ_DMA_TPG.
@@ -1185,7 +1191,6 @@ int mdss_samsung_send_cmd(struct mdss_dsi_ctrl_pdata *ctrl, enum mipi_samsung_tx
 #endif
 
 	mutex_lock(&vdd->vdd_lock);
-	pcmds = mdss_samsung_cmds_select(ctrl, cmd, &flags);
 	if (!IS_ERR_OR_NULL(pcmds) && !IS_ERR_OR_NULL(pcmds->cmds))
 		mdss_dsi_panel_cmds_send(ctrl, pcmds, flags);
 	else
@@ -1551,6 +1556,9 @@ int mdss_samsung_panel_on_post(struct mdss_panel_data *pdata)
 			vdd->esd_recovery.esd_irq_enable(true, true, (void *)vdd);
 		vdd->esd_recovery.is_enabled_esd_recovery = true;
 	}
+
+	if (vdd->poc_driver.check_read_case)
+		vdd->poc_driver.read_case = vdd->poc_driver.check_read_case(vdd);
 
 	LCD_INFO("-: ndx=%d\n", ndx);
 
@@ -2814,22 +2822,32 @@ void mdss_samsung_panel_parse_dt_cmds(struct device_node *np,
 				"samsung,mcd_off_tx_cmds_rev", panel_rev, NULL);
 
 		/* PoC */
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_KEY_ENABLE][panel_rev], "samsung,poc_key_enable_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_KEY_DISABLE][panel_rev], "samsung,poc_key_disable_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_ENABLE][panel_rev], "samsung,poc_enable_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_DISABLE][panel_rev], "samsung,poc_disable_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_ERASE][panel_rev], "samsung,poc_erase_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_ERASE1][panel_rev], "samsung,poc_erase1_tx_cmds_rev", panel_rev, NULL);
-		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_1BYTE][panel_rev], "samsung,poc_write_1byte_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_PRE_ERASE_SECTOR][panel_rev], "samsung,poc_pre_erase_sector_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_ERASE_SECTOR][panel_rev], "samsung,poc_erase_sector_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_POST_ERASE_SECTOR][panel_rev], "samsung,poc_post_erase_sector_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_PRE_WRITE][panel_rev], "samsung,poc_pre_write_tx_cmds_rev", panel_rev, NULL);
-		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_CONTINUE][panel_rev], "samsung,poc_write_continue_tx_cmds_rev", panel_rev, NULL);
-		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_CONTINUE2][panel_rev], "samsung,poc_write_continue2_tx_cmds_rev", panel_rev, NULL);
-		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_CONTINUE3][panel_rev], "samsung,poc_write_continue3_tx_cmds_rev", panel_rev, NULL);
-		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_END][panel_rev], "samsung,poc_write_end_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_LOOP_START][panel_rev], "samsung,poc_write_loop_start_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_LOOP_DATA_ADD][panel_rev], "samsung,poc_write_loop_data_add_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_LOOP_1BYTE][panel_rev], "samsung,poc_write_loop_1byte_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_LOOP_256BYTE][panel_rev], "samsung,poc_write_loop_256byte_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_WRITE_LOOP_END][panel_rev], "samsung,poc_write_loop_end_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_POST_WRITE][panel_rev], "samsung,poc_post_write_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_PRE_READ][panel_rev], "samsung,poc_pre_read_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_PRE_READ2][panel_rev], "samsung,poc_pre_read2_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_READ][panel_rev], "samsung,poc_read_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_POST_READ][panel_rev], "samsung,poc_post_read_tx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_REG_READ_POS][panel_rev], "samsung,reg_poc_read_pos_tx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_tx_cmd_list[TX_POC_COMP][panel_rev], "samsung,poc_compensation_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_rx_cmd_list[RX_POC_READ][panel_rev], "samsung,poc_read_rx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_rx_cmd_list[RX_POC_STATUS][panel_rev], "samsung,poc_status_rx_cmds_rev", panel_rev, NULL);
 		parse_dt_data(np, &dtsi_data->panel_rx_cmd_list[RX_POC_CHECKSUM][panel_rev], "samsung,poc_checksum_rx_cmds_rev", panel_rev, NULL);
+		parse_dt_data(np, &dtsi_data->panel_rx_cmd_list[RX_POC_MCA_CHECK][panel_rev], "samsung,poc_mca_check_rx_cmds_rev", panel_rev, NULL);
 
 		/* CONFIG_TCON_MDNIE_LITE */
 		parse_dt_data(np, &dtsi_data->panel_rx_cmd_list[RX_MDNIE][panel_rev],
@@ -3332,6 +3350,69 @@ void mdss_samsung_panel_parse_dt(struct device_node *np,
 	vdd->poc_driver.write_delay_us = (!rc ? tmp[0] : 0);
 
 	LCD_INFO("erase_delay_ms(%d) write_delay_us (%d)\n", vdd->poc_driver.erase_delay_ms, vdd->poc_driver.write_delay_us);
+
+	if (vdd->poc_driver.is_support) {
+		ss_dsi_poc_init(&vdd_data);
+
+		/* POC IMAGE SIZE */
+		rc = of_property_read_u32(np, "samsung,poc_image_size", tmp);
+		vdd->poc_driver.image_size = (!rc ? tmp[0] : 0);
+		LCD_INFO("[POC] image_size (%d)\n", vdd->poc_driver.image_size);
+
+		/* ERASE */
+		rc = of_property_read_u32(np, "samsung,poc_erase_delay_us", tmp);
+		vdd->poc_driver.erase_delay_us = (!rc ? tmp[0] : 0);
+
+		rc = of_property_read_u32_array(np, "samsung,poc_erase_sector_addr_idx", vdd->poc_driver.erase_sector_addr_idx, 3);
+		if (rc) {
+			vdd->poc_driver.erase_sector_addr_idx[0] = -1;
+			LCD_INFO("fail to get poc_erase_sector_addr_idx\n");
+		}
+
+		LCD_INFO("[POC][ERASE] delay_us(%d) addr idx (%d %d %d)\n",
+			vdd->poc_driver.erase_delay_us,
+			vdd->poc_driver.erase_sector_addr_idx[0],
+			vdd->poc_driver.erase_sector_addr_idx[1],
+			vdd->poc_driver.erase_sector_addr_idx[2]);
+
+		/* WRITE */
+		rc = of_property_read_u32(np, "samsung,poc_write_delay_us", tmp);
+		vdd->poc_driver.write_delay_us = (!rc ? tmp[0] : 0);
+		rc = of_property_read_u32(np, "samsung,poc_write_data_size", tmp);
+		vdd->poc_driver.write_data_size = (!rc ? tmp[0] : 0);
+		rc = of_property_read_u32(np, "samsung,poc_write_loop_cnt", tmp);
+		vdd->poc_driver.write_loop_cnt = (!rc ? tmp[0] : 0);
+
+		rc = of_property_read_u32_array(np, "samsung,poc_write_addr_idx", vdd->poc_driver.write_addr_idx, 3);
+		if (rc) {
+			vdd->poc_driver.write_addr_idx[0] = -1;
+			LCD_INFO("fail to get poc_write_addr_idx\n");
+		}
+
+		LCD_INFO("[POC][WRITE] delay_us(%d) data_size(%d) loo_cnt(%d) addr idx (%d %d %d)\n",
+			vdd->poc_driver.write_delay_us,
+			vdd->poc_driver.write_data_size,
+			vdd->poc_driver.write_loop_cnt,
+			vdd->poc_driver.write_addr_idx[0],
+			vdd->poc_driver.write_addr_idx[1],
+			vdd->poc_driver.write_addr_idx[2]);
+
+		/* READ */
+		rc = of_property_read_u32(np, "samsung,poc_read_delay_us", tmp);
+		vdd->poc_driver.read_delay_us = (!rc ? tmp[0] : 0);
+
+		rc = of_property_read_u32_array(np, "samsung,poc_read_addr_idx", vdd->poc_driver.read_addr_idx, 3);
+		if (rc) {
+			vdd->poc_driver.read_addr_idx[0] = -1;
+			LCD_INFO("fail to get poc_read_addr_idx\n");
+		}
+
+		LCD_INFO("[POC][READ] delay_us(%d) addr idx (%d %d %d)\n",
+			vdd->poc_driver.read_delay_us,
+			vdd->poc_driver.read_addr_idx[0],
+			vdd->poc_driver.read_addr_idx[1],
+			vdd->poc_driver.read_addr_idx[2]);
+	}
 
 	/* dsiphy drive strength*/
 	rc = of_property_read_u32(np, "samsung,dsiphy_drive_str", tmp);
@@ -4644,6 +4725,9 @@ int mdss_samsung_brightness_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 			/* copr sum after changing brightness to calculate brightness avg.*/
 			if (vdd->copr.copr_on)
 				vdd->panel_func.samsung_set_copr_sum(vdd);
+
+			if (vdd->poc_driver.is_support)
+				ss_poc_comp(vdd); /* send poc compensation */
 
 			LCD_INFO("DSI%d level : %d  candela : %dCD hbm : %d (%d)\n",
 				ndx, vdd->bl_level, vdd->candela_level, vdd->display_status_dsi[ndx].hbm_mode, vdd->auto_brightness);

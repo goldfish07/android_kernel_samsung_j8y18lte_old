@@ -24,6 +24,9 @@
 #define __MUIC_NOTIFIER_H__
 
 #include <linux/muic/muic.h>
+#if defined(CONFIG_MUIC_S2MU004)
+#include <linux/muic/muic_interface.h>
+#endif
 #if defined(CONFIG_CCIC_NOTIFIER)
 #include <linux/ccic/ccic_notifier.h>
 #endif
@@ -84,6 +87,8 @@ extern void muic_notifier_vbus_off(muic_attached_dev_t new_dev);
 #endif
 
 #if defined(CONFIG_MUIC_S2MU004)
+extern void muic_register_usb_notifier(struct muic_interface_t *muic_if);
+extern void muic_unregister_usb_notifier(struct muic_interface_t *muic_if);
 extern void muic_pdic_notifier_attach_attached_dev(muic_attached_dev_t new_dev);
 extern void muic_pdic_notifier_detach_attached_dev(muic_attached_dev_t new_dev);
 extern int muic_ccic_notifier_register(struct notifier_block *nb,

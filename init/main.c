@@ -93,6 +93,11 @@
 #include <asm/smp.h>
 #endif
 
+#ifdef CONFIG_SECURITY_DEFEX
+#include <linux/defex.h>
+void __init __weak defex_load_rules(void) { }
+#endif
+
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -125,6 +130,7 @@ void (*__initdata late_time_init)(void);
 char __initdata boot_command_line[COMMAND_LINE_SIZE];
 /* Untouched saved command line (eg. for /proc) */
 char *saved_command_line;
+char *erased_command_line;
 /* Command line for parameter parsing */
 static char *static_command_line;
 /* Command line for per-initcall parameter parsing */
@@ -391,10 +397,13 @@ static void __init setup_command_line(char *command_line)
 {
 	saved_command_line =
 		memblock_virt_alloc(strlen(boot_command_line) + 1, 0);
+	erased_command_line =
+		memblock_virt_alloc(strlen(boot_command_line) + 1, 0);
 	initcall_command_line =
 		memblock_virt_alloc(strlen(boot_command_line) + 1, 0);
 	static_command_line = memblock_virt_alloc(strlen(command_line) + 1, 0);
 	strcpy(saved_command_line, boot_command_line);
+	strcpy(erased_command_line, boot_command_line);
 	strcpy(static_command_line, command_line);
 }
 
@@ -538,17 +547,23 @@ static void __init mm_init(void)
 	 */
 	page_cgroup_init_flatmem();
 	mem_init();
+	set_memsize_kernel_type(MEMSIZE_KERNEL_STOP);
 	kmem_cache_init();
 	percpu_init_late();
 	pgtable_init();
 	vmalloc_init();
-	set_memsize_kernel_type(MEMSIZE_KERNEL_OTHERS);
 }
 
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
 	char *after_dashes;
+#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
+	char *erase_cmd_start, *erase_cmd_end;
+	char *erase_string[] = {"ap_serial=0x", "serialno=", "em.did="};
+	size_t len, value_len;
+	unsigned int i, j;
+#endif
 
 	set_memsize_kernel_type(MEMSIZE_KERNEL_OTHERS);
 	/*
@@ -586,7 +601,28 @@ asmlinkage __visible void __init start_kernel(void)
 	build_all_zonelists(NULL, NULL);
 	page_alloc_init();
 
+#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
 	pr_notice("Kernel command line: %s\n", boot_command_line);
+#else
+	for (i = 0; i < ARRAY_SIZE(erase_string); i++) {
+		len = strlen(erase_string[i]);
+		erase_cmd_start = strstr(erased_command_line, erase_string[i]);
+		if (erase_cmd_start == NULL)
+			continue;
+
+		erase_cmd_end = strstr(erase_cmd_start, " ");
+
+		if ( (erase_cmd_end != NULL) && (erase_cmd_start != NULL)
+				&& (erase_cmd_end > erase_cmd_start) ) {
+			value_len = (size_t)(erase_cmd_end - erase_cmd_start) - len;
+
+			for (j = 0; j < value_len; j++) {
+				erase_cmd_start[len + j] = '0';
+			}
+		}
+	}
+	pr_notice("Kernel command line: %s\n", erased_command_line);
+#endif
 	parse_early_param();
 	after_dashes = parse_args("Booting kernel",
 				  static_command_line, __start___param,
@@ -729,7 +765,6 @@ asmlinkage __visible void __init start_kernel(void)
 
 	ftrace_init();
 
-	set_memsize_kernel_type(MEMSIZE_KERNEL_STOP);
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
 }
@@ -1116,4 +1151,7 @@ static noinline void __init kernel_init_freeable(void)
 
 	/* rootfs is available now, try loading default modules */
 	load_default_modules();
+#ifdef CONFIG_SECURITY_DEFEX
+	defex_load_rules();
+#endif
 }

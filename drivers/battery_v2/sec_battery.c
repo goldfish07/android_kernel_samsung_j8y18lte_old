@@ -542,7 +542,7 @@ static void sec_bat_get_charging_current_by_siop(struct sec_battery_info *batter
 		}
 	} else if (battery->siop_level < 100) {
 		int max_charging_current;
-#if defined(CONFIG_SEC_J6PRIMELTE_PROJECT) || defined(CONFIG_SEC_J4PRIMELTE_PROJECT)
+#if defined(CONFIG_SEC_J6PRIMELTE_PROJECT) || defined(CONFIG_SEC_J4PRIMELTE_PROJECT) || defined(CONFIG_SEC_GTA2XLLTE_PROJECT)
 		max_charging_current = battery->pdata->siop_charging_limit_current; /* 1 step(70) */
 		if (battery->siop_level == 0) { /* 3 step(0) */
 			max_charging_current = 100;
@@ -591,7 +591,7 @@ static void sec_bat_get_charging_current_by_siop(struct sec_battery_info *batter
 		} else {
 			if (*input_current > battery->pdata->siop_input_limit_current)
 				*input_current = battery->pdata->siop_input_limit_current;
-#if defined(CONFIG_SEC_J6PRIMELTE_PROJECT) || defined(CONFIG_SEC_J4PRIMELTE_PROJECT)
+#if defined(CONFIG_SEC_J6PRIMELTE_PROJECT) || defined(CONFIG_SEC_J4PRIMELTE_PROJECT) || defined(CONFIG_SEC_GTA2XLLTE_PROJECT)
 			if (*charging_current > battery->pdata->siop_charging_limit_current)
 				*charging_current = battery->pdata->siop_charging_limit_current;
 #endif
@@ -6308,6 +6308,7 @@ ssize_t sec_bat_store_attrs(struct device *dev,
 		}
 		break;
 	case FACTORY_MODE_BYPASS:
+		pr_info("Factory Mode Bypass\n");
 		if (sscanf(buf, "%10d\n", &x) == 1) {
 			value.intval = x;
 			psy_do_property(battery->pdata->charger_name, set,
@@ -6316,8 +6317,14 @@ ssize_t sec_bat_store_attrs(struct device *dev,
 		}
 		break;
 	case NORMAL_MODE_BYPASS:
+		pr_info("Normal Mode Bypass\n");
 		if (sscanf(buf, "%10d\n", &x) == 1) {
 			value.intval = x;
+			if (battery->pdata->detect_moisture && x) {
+				sec_bat_set_charging_status(battery,
+					POWER_SUPPLY_STATUS_DISCHARGING);
+				sec_bat_set_charge(battery, SEC_BATTERY_BUCKOFF);
+			}
 			psy_do_property(battery->pdata->charger_name, set,
 				POWER_SUPPLY_EXT_PROP_CURRENT_MEASURE, value);
 			ret = count;
@@ -6741,7 +6748,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 		val->intval = battery->current_avg;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
-		val->intval = battery->pdata->battery_full_capacity * battery->capacity;
+		val->intval = battery->pdata->battery_full_capacity * battery->capacity * 10;
 		break;
 	/* charging mode (differ from power supply) */
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
@@ -7338,6 +7345,7 @@ static void sec_bat_set_rp_current(struct sec_battery_info *battery, int cable_t
 	sec_bat_set_charging_current(battery);
 }
 #endif
+#define SEC_INPUT_VOLTAGE_5V	5
 
 static int make_pd_list(struct sec_battery_info *battery)
 {
@@ -7349,14 +7357,14 @@ static int make_pd_list(struct sec_battery_info *battery)
 
 	for (base_charge_power = pd_charging_charge_power * 1000;
 	    base_charge_power >= 1000000; base_charge_power -= 1000000) {
-		selected_pdo_voltage = battery->pdata->max_input_voltage + 1;
+		selected_pdo_voltage = SEC_INPUT_VOLTAGE_5V * 1000 - 1;
 		selected_pdo_num = 0;
 		for (i = 1; i <= battery->pdic_info.sink_status.available_pdo_num; i++) {
 			if (battery->pdic_info.sink_status.power_list[i].max_voltage *
 			    battery->pdic_info.sink_status.power_list[i].max_current > base_charge_power - 1000000 &&
 			    battery->pdic_info.sink_status.power_list[i].max_voltage *
 			    battery->pdic_info.sink_status.power_list[i].max_current <= base_charge_power) {
-				if (battery->pdic_info.sink_status.power_list[i].max_voltage < selected_pdo_voltage) {
+				if (battery->pdic_info.sink_status.power_list[i].max_voltage > selected_pdo_voltage) {
 					selected_pdo_voltage = battery->pdic_info.sink_status.power_list[i].max_voltage;
 					selected_pdo_num = i;
 				}

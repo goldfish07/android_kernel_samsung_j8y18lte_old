@@ -29,6 +29,7 @@
 #include <linux/sec_class.h>
 #include <linux/muic/s2mu004-muic-sysfs.h>
 #include <linux/sec_param.h>
+#include "../battery_v2/include/sec_charging_common.h"
 
 static ssize_t s2mu004_muic_show_uart_en(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -495,6 +496,7 @@ static ssize_t s2mu004_muic_set_afc_disable(struct device *dev,
 	struct muic_interface_t *muic_if = (struct muic_interface_t *)muic_data->if_data;
 	int mdev = 0;
 #endif /* CONFIG_CCIC_NOTIFIER */
+	union power_supply_propval psy_val;
 
 	mutex_lock(&muic_data->muic_mutex);
 
@@ -530,6 +532,9 @@ static ssize_t s2mu004_muic_set_afc_disable(struct device *dev,
 #endif
 
 	pr_info("%s afc_disable(%d)\n", __func__, pdata->afc_disable);
+	psy_val.intval = pdata->afc_disable ? '1' : '0';
+	psy_do_property("battery", set,
+		POWER_SUPPLY_EXT_PROP_HV_DISABLE, psy_val);
 
 	/* FIXME: for factory self charging test (AFC-> NORMAL TA) */
 #ifdef CONFIG_CCIC_NOTIFIER

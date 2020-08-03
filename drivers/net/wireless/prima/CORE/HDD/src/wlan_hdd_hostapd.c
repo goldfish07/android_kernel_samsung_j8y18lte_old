@@ -337,6 +337,46 @@ int hdd_hostapd_change_mtu(struct net_device *dev, int new_mtu)
 
     return ret;
 }
+/**
+ * hdd_set_auto_channel() - function used to set auto channel
+ * @pAdapter: pointer to the adapter of the interface.
+ * @command: pointer to the command buffer "AUTO_CHANNEL <value>".
+ * Return: 0 on success -EINVAL on failure.
+ */
+int hdd_set_auto_channel(hdd_adapter_t *pAdapter, tANI_U8 *command)
+{
+	tANI_U8 filterType = 0;
+	hdd_context_t *pHddCtx = NULL;
+	tANI_U8 *value;
+
+	pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
+
+	if (0 != wlan_hdd_validate_context(pHddCtx)) {
+		VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+				FL("pHddCtx is not valid, Unable to set auto channel"));
+		return -EINVAL;
+	}
+
+	value = command + 13;
+
+	/* Convert the value from ascii to integer */
+	if (kstrtou8(value, 10, &filterType) < 0) {
+		/* If the input value is greater than max value of datatype,
+		 * then also kstrtou8 fails
+		 */
+		hddLog(VOS_TRACE_LEVEL_ERROR, "%s: kstrtou8 failed range", __func__);
+		return -EINVAL;
+	}
+
+	hddLog(VOS_TRACE_LEVEL_INFO, "%s: auto channel %hu", __func__, filterType);
+
+	if (filterType == 0 || filterType == 1)
+		pHddCtx->cfg_ini->apAutoChannelSelection = filterType;
+	else
+		return -EINVAL;
+
+	return 0;
+}
 
 static int hdd_hostapd_driver_command(hdd_adapter_t *pAdapter,
                                       hdd_priv_data_t *priv_data)
@@ -387,7 +427,7 @@ static int hdd_hostapd_driver_command(hdd_adapter_t *pAdapter,
    /* Make sure the command is NUL-terminated */
    command[priv_data->total_len] = '\0';
 
-   hddLog(VOS_TRACE_LEVEL_INFO,
+   hddLog(VOS_TRACE_LEVEL_ERROR,
           "***HOSTAPD*** : Received %s cmd from Wi-Fi GUI***", command);
 
    if (strncmp(command, "P2P_SET_NOA", 11) == 0)
@@ -471,6 +511,10 @@ static int hdd_hostapd_driver_command(hdd_adapter_t *pAdapter,
            goto exit;
 
        ret = hdd_enable_disable_ca_event(pHddCtx, command, 16);
+   }
+   else if (strncmp(command, "AUTO_CHANNEL", 12) == 0)
+   {
+      hdd_set_auto_channel(pAdapter, command);
    }
 
    /*

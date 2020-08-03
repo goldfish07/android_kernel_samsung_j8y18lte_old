@@ -1656,6 +1656,7 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 		}
 		break;
 	case DEV_TYPE2_JIG_UART_ON:
+#if defined (CONFIG_MUIC_S2MU005_SUPPORT_WATERPROOF)
 		if (vbvolt) {
 			new_dev = ATTACHED_DEV_JIG_UART_ON_VB_MUIC;
 			pr_info("%s:%s: JIG_UART_ON_VB DETECTED\n", MUIC_DEV_NAME, __func__);
@@ -1664,6 +1665,10 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
 			pr_info("%s:%s: JIG_UART_ON DETECTED\n", MUIC_DEV_NAME, __func__);
 		}
+#else
+			new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+			pr_info("%s:%s: JIG_UART_ON DETECTED\n", MUIC_DEV_NAME, __func__);
+#endif
 		break;
 	case DEV_TYPE2_JIG_USB_OFF:
 		if (!vbvolt)
@@ -1822,6 +1827,7 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 			}
 			break;
 		case ADC_JIG_UART_ON:
+#if defined (CONFIG_MUIC_S2MU005_SUPPORT_WATERPROOF)
 			if (vbvolt) {
 				new_dev = ATTACHED_DEV_JIG_UART_ON_VB_MUIC;
 				pr_info("%s:%s: ADC JIG_UART_ON_VB DETECTED\n",
@@ -1832,6 +1838,11 @@ static void s2mu005_muic_detect_dev(struct s2mu005_muic_data *muic_data)
 				pr_info("%s:%s: ADC JIG_UART_ON DETECTED\n",
 							MUIC_DEV_NAME, __func__);
 			}
+#else
+				new_dev = ATTACHED_DEV_JIG_UART_ON_MUIC;
+				pr_info("%s:%s: ADC JIG_UART_ON DETECTED\n",
+							MUIC_DEV_NAME, __func__);
+#endif
 			break;
 		case ADC_DESKDOCK:
 #if defined (CONFIG_MUIC_S2MU005_SUPPORT_DESKDOCK)

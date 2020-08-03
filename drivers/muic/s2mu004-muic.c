@@ -141,9 +141,7 @@ static const char *dev_to_str(muic_attached_dev_t n)
 		ENUM_STR(ATTACHED_DEV_UNSUPPORTED_ID_VB_MUIC);
 		ENUM_STR(ATTACHED_DEV_TIMEOUT_OPEN_MUIC);
 		ENUM_STR(ATTACHED_DEV_WIRELESS_PAD_MUIC);
-#if IS_ENABLED(CONFIG_SEC_FACTORY)
 		ENUM_STR(ATTACHED_DEV_CARKIT_MUIC);
-#endif
 		ENUM_STR(ATTACHED_DEV_POWERPACK_MUIC);
 		ENUM_STR(ATTACHED_DEV_UNDEFINED_RANGE_MUIC);
 		ENUM_STR(ATTACHED_DEV_HICCUP_MUIC);
@@ -2167,6 +2165,12 @@ static void s2mu004_muic_detect_dev(struct s2mu004_muic_data *muic_data)
 	if (ret == S2MU004_DETECT_SKIP)
 		return;
 
+	if (muic_if->powerrole_state)
+	{
+		pr_info("%s Power Role state, just return!\n", __func__);
+		return;
+	}
+
 #if defined(CONFIG_CCIC_NOTIFIER)
 	if (!(muic_if->opmode & OPMODE_CCIC))
 		s2mu004_muic_detect_jig_dev_type(muic_data, read_val, vbvolt, &intr, &new_dev);
@@ -2821,6 +2825,10 @@ static int s2mu004_muic_probe(struct platform_device *pdev)
 #endif
 	INIT_DELAYED_WORK(&muic_data->dcd_recheck, s2mu004_muic_dcd_recheck);
 	s2mu004_muic_irq_thread(-1, muic_data);
+
+#if defined(CONFIG_USB_EXTERNAL_NOTIFY)
+	muic_register_usb_notifier(muic_if);
+#endif
 
 #if defined(CONFIG_MUIC_KEYBOARD)
 	/* Enable rid detection */

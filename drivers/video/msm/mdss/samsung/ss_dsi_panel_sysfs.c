@@ -1510,7 +1510,6 @@ end:
 	return size;
 }
 
-#if defined(CONFIG_SUPPORT_POC_FLASH)
 #define MAX_POC_SHOW_WAIT 500
 static ssize_t mipi_samsung_poc_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
@@ -1611,7 +1610,7 @@ static ssize_t mipi_samsung_poc_store(struct device *dev,
 	if (input == 1) {
 		LCD_INFO("ERASE \n");
 		if (vdd->panel_func.samsung_poc_ctrl) {
-			ret = vdd->panel_func.samsung_poc_ctrl(vdd, POC_OP_ERASE);
+			ret = vdd->panel_func.samsung_poc_ctrl(vdd, POC_OP_ERASE, buf);
 		}
 	} else if (input == 2) {
 		LCD_INFO("WRITE \n");
@@ -1620,13 +1619,55 @@ static ssize_t mipi_samsung_poc_store(struct device *dev,
 	} else if (input == 4) {
 		LCD_INFO("STOP\n");
 		atomic_set(&vdd->poc_driver.cancel, 1);
+	} else if (input == 7) {
+		LCD_INFO("ERASE_SECTOR \n");
+		if (vdd->panel_func.samsung_poc_ctrl) {
+			ret = vdd->panel_func.samsung_poc_ctrl(vdd, POC_OP_ERASE_SECTOR, buf);
+		}
 	} else {
 		LCD_INFO("input check !! \n");
 	}
 
 	return size;
 }
-#endif
+
+static ssize_t mipi_samsung_poc_mca_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct samsung_display_driver_data *vdd = (struct samsung_display_driver_data *)dev_get_drvdata(dev);
+	int i, len = 0;
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd");
+		return -ENODEV;
+	}
+
+	ss_poc_read_mca(vdd);
+
+	if (vdd->poc_driver.mca_data) {
+		for (i = 0; i < vdd->poc_driver.mca_size; i++)
+			len += snprintf(buf + len, 60, "%02x ", vdd->poc_driver.mca_data[i]);
+
+		len += snprintf(buf + len, 60, "\n");
+	}
+
+	return strlen(buf);
+}
+
+static ssize_t mipi_samsung_poc_info_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct samsung_display_driver_data *vdd = (struct samsung_display_driver_data *)dev_get_drvdata(dev);
+
+	if (IS_ERR_OR_NULL(vdd)) {
+		LCD_ERR("no vdd");
+		return -ENODEV;
+	}
+
+	LCD_INFO("POC VECTOR SIZE : %d\n", vdd->poc_driver.image_size);
+	snprintf(buf, PAGE_SIZE, "poc_mca_image_size %d\n", vdd->poc_driver.image_size);
+
+	return strlen(buf);
+}
 
 static ssize_t xtalk_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
@@ -2558,9 +2599,9 @@ static DEVICE_ATTR(alpm, S_IRUGO | S_IWUSR | S_IWGRP, mdss_samsung_panel_lpm_sho
 static DEVICE_ATTR(hmt_bright, S_IRUGO | S_IWUSR | S_IWGRP, mipi_samsung_hmt_bright_show, mipi_samsung_hmt_bright_store);
 static DEVICE_ATTR(hmt_on, S_IRUGO | S_IWUSR | S_IWGRP,	mipi_samsung_hmt_on_show, mipi_samsung_hmt_on_store);
 static DEVICE_ATTR(mcd_mode, S_IRUGO | S_IWUSR | S_IWGRP, NULL, mipi_samsung_mcd_store);
-#if defined(CONFIG_SUPPORT_POC_FLASH)
 static DEVICE_ATTR(poc, S_IRUGO | S_IWUSR | S_IWGRP, mipi_samsung_poc_show, mipi_samsung_poc_store);
-#endif
+static DEVICE_ATTR(poc_mca, S_IRUGO | S_IWUSR | S_IWGRP, mipi_samsung_poc_mca_show, NULL);
+static DEVICE_ATTR(poc_info, S_IRUGO | S_IWUSR | S_IWGRP, mipi_samsung_poc_info_show, NULL);
 static DEVICE_ATTR(irc, S_IRUGO | S_IWUSR | S_IWGRP, mdss_samsung_irc_show, mdss_samsung_irc_store);
 static DEVICE_ATTR(ldu_correction, S_IRUGO | S_IWUSR | S_IWGRP, mdss_samsung_ldu_correction_show, mdss_samsung_ldu_correction_store);
 static DEVICE_ATTR(adaptive_control, S_IRUGO | S_IWUSR | S_IWGRP, NULL, mdss_samsung_adaptive_control_store);
@@ -2619,9 +2660,9 @@ static struct attribute *panel_sysfs_attributes[] = {
 /*	&dev_attr_act_clock_test.attr,*/
 	&dev_attr_xtalk_mode.attr,
 	&dev_attr_brightness_table.attr,
-#if defined(CONFIG_SUPPORT_POC_FLASH)
 	&dev_attr_poc.attr,
-#endif
+	&dev_attr_poc_mca.attr,
+	&dev_attr_poc_info.attr,
 #ifdef CONFIG_DISPLAY_USE_INFO
 	&dev_attr_dpui.attr,
 	&dev_attr_dpui_dbg.attr,

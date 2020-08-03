@@ -4198,6 +4198,42 @@ out:
 	return len;
 }
 
+static ssize_t sd_health_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mmc_host *host = dev_get_drvdata(dev);
+	struct mmc_card *card = host->card;
+	struct mmc_card_error_log *err_log;
+	u64 total_c_cnt = 0;
+	u64 total_t_cnt = 0;
+	int len = 0;
+	int i = 0;
+
+	if (!card) {
+		//There should be no spaces in 'No Card'(Vold Team).
+		len = snprintf(buf, PAGE_SIZE, "NOCARD\n");
+		goto out;
+	}
+
+	err_log = card->err_log;
+
+	for (i = 0; i < 6; i++) {
+		if (err_log[i].err_type == -EILSEQ && total_c_cnt < MAX_CNT_U64)
+			total_c_cnt += err_log[i].count;
+		if (err_log[i].err_type == -ETIMEDOUT && total_t_cnt < MAX_CNT_U64)
+			total_t_cnt += err_log[i].count;
+	}
+
+	if(err_log[0].ge_cnt > 100 || err_log[0].ecc_cnt > 0 || err_log[0].wp_cnt > 0 ||
+			err_log[0].oor_cnt > 10 || total_t_cnt > 100 || total_c_cnt > 100)
+		len = snprintf(buf, PAGE_SIZE, "BAD\n");
+	else
+		len = snprintf(buf, PAGE_SIZE, "GOOD\n");
+
+out:
+	return len;
+}
+
 /* For checking reset pin of mmc*/
 static struct device *mmc_card_dev;
 #ifdef CONFIG_SEC_FACTORY
@@ -4329,6 +4365,26 @@ static ssize_t mmc_summary_show(struct device *dev,
 	}
 }
 
+static ssize_t sd_cid_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mmc_host *host = dev_get_drvdata(dev);
+	struct mmc_card *card = host->card;
+	int len = 0;
+
+	if (!card) {
+		len = snprintf(buf, PAGE_SIZE, "no card\n");
+		goto out;
+	}
+
+	len = snprintf(buf, PAGE_SIZE,
+			"%08x%08x%08x%08x\n",
+			card->raw_cid[0], card->raw_cid[1],
+			card->raw_cid[2], card->raw_cid[3]);
+out:
+	return len;
+}
+
 static DEVICE_ATTR(status, S_IRUGO, t_flash_detect_show, NULL);
 static DEVICE_ATTR(cd_cnt, S_IRUGO, sd_detect_cnt_show, NULL);
 static DEVICE_ATTR(max_mode, S_IRUGO, sd_detect_maxmode_show, NULL);
@@ -4339,6 +4395,8 @@ static DEVICE_ATTR(sd_count, S_IRUGO, sd_count_show, NULL);
 static DEVICE_ATTR(sd_data, S_IRUGO, sd_data_show, NULL);
 static DEVICE_ATTR(mmc_data, S_IRUGO, mmc_data_show, NULL);
 static DEVICE_ATTR(mmc_summary, S_IRUGO, mmc_summary_show, NULL);
+static DEVICE_ATTR(data, 0444, sd_cid_show, NULL);
+static DEVICE_ATTR(fc, 0444, sd_health_show, NULL);
 
 /* Callback function for SD Card IO Error */
 static int sdcard_uevent(struct mmc_card *card)
@@ -4832,9 +4890,19 @@ static int sdhci_msm_probe(struct platform_device *pdev)
                         pr_err("%s : Failed to create device!\n", __func__);
 
                 if (device_create_file(sd_info_dev,
-                        &dev_attr_sd_count) < 0)
+					&dev_attr_sd_count) < 0)
                         pr_err("%s : Failed to create device file(%s)!\n",
                                         __func__, dev_attr_sd_count.attr.name);
+
+		if (device_create_file(sd_info_dev,
+					&dev_attr_data) < 0)
+                        pr_err("%s : Failed to create device file(%s)!\n",
+                                        __func__, dev_attr_data.attr.name);
+
+		if (device_create_file(sd_info_dev,
+					&dev_attr_fc) < 0)
+			pr_err("%s : Failed to create device file(%s)!\n",
+					__func__, dev_attr_fc.attr.name);
 
                 dev_set_drvdata(sd_info_dev, msm_host->mmc);
         }

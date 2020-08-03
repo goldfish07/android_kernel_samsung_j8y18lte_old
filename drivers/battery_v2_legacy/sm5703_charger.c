@@ -195,7 +195,7 @@ static void sm5703_charger_otg_control(struct sm5703_charger_data *charger,
 		charger->cable_type = POWER_SUPPLY_TYPE_OTG;
 	}
 }
-
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 static void sm5703_charger_vbus_control(struct sm5703_charger_data *charger,
 		int onoff)
 {
@@ -222,7 +222,7 @@ static void sm5703_charger_vbus_control(struct sm5703_charger_data *charger,
 #endif
 	}
 }
-
+#endif
 static void sm5703_enable_charger_switch(struct sm5703_charger_data *charger,
 		int onoff)
 {
@@ -230,6 +230,12 @@ static void sm5703_enable_charger_switch(struct sm5703_charger_data *charger,
 	union power_supply_propval batt_pres;
 #endif
 
+#if defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
+	if (otg_enable_flag) {
+		pr_info("[DEBUG] %s: skipped set(%d) : OTG is on\n", __func__, otg_enable_flag);
+		return;
+	}
+#endif
 	if (onoff > 0){
 		pr_info("%s: turn on charger\n", __func__);
 
@@ -856,19 +862,27 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 			if (charger->cable_type == POWER_SUPPLY_TYPE_POWER_SHARING){
 				charger->is_charging = false;
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 				sm5703_charger_otg_control(charger, 1);
+#endif
 			} else if (charger->cable_type == POWER_SUPPLY_TYPE_OTG) {
 				charger->is_charging = false;
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 				pr_info("OTG enable, cable(%d)\n", charger->cable_type);
 				sm5703_charger_otg_control(charger, 1);
+#endif
 			} else if (charger->cable_type == POWER_SUPPLY_TYPE_BATTERY) {
 				sm5703_enable_autoset(charger,(int)charger->pdata->chg_autoset);
 				charger->is_charging = false;
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 				sm5703_charger_vbus_control(charger, 0);
 				if(prev_cable_type != POWER_SUPPLY_TYPE_LAN_HUB)
 					sm5703_charger_otg_control(charger, 0);
+#endif
 			} else {
+#if !defined(CONFIG_USB_TYPEC_MANAGER_NOTIFIER)
 				sm5703_charger_vbus_control(charger, 1);
+#endif
 			}
 			break;
 		/* set input current */

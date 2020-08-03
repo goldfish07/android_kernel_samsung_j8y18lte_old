@@ -28,7 +28,7 @@ BUILD_KERNEL_OUT_DIR=$PRODUCT_OUT/obj/KERNEL_OBJ
 
 
 SECURE_SCRIPT=$BUILD_ROOT_DIR/buildscript/tools/signclient.jar
-BUILD_CROSS_COMPILE=$BUILD_ROOT_DIR/android/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
+BUILD_CROSS_COMPILE=$BUILD_ROOT_DIR/android/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/arm-linux-androidkernel-
 BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
 
 KERNEL_DEFCONFIG=msm8937_sec_defconfig

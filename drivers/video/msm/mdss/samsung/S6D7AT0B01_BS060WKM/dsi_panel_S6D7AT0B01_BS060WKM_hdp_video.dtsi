@@ -208,7 +208,7 @@
 		samsung,candela_map_table_revA = <
 		/*<idx>	  <from>  <till> <scaled_level> */
 			0		0		0		0
-			1		1		1		0
+			1		1		1		15
 			2		2		2		15
 			3		3		3		22
 			4		4		4		29

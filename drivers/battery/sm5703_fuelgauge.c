@@ -684,8 +684,8 @@ void fg_abnormal_reset_check(struct i2c_client *client)
 				dev_info(&client->dev, "%s: SM5703 FG abnormal case.... SW reset OK\n",
 					__func__);
 			}
-			/* delay 200ms */
-			msleep(200);
+			/* delay 400ms */
+			msleep(400);
 			/* init code */
 			sm5703_fg_init(client, true);
 		}
@@ -1599,8 +1599,8 @@ bool sm5703_fg_reset(struct i2c_client *client)
 
 	// SW reset code
 	sm5703_fg_i2c_write_word(client, 0x90, 0x0008);
-	// delay 200ms
-	msleep(200);
+	// delay 400ms
+	msleep(400);
 	// init code
 	sm5703_fg_init(client, false);
 

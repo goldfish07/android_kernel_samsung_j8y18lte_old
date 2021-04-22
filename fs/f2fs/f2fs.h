@@ -1859,7 +1859,6 @@ static inline int inc_valid_block_count(struct f2fs_sb_info *sbi,
 		release = *count;
 		goto enospc;
 	}
-
 	/*
 	 * let's increase this in prior to actual block count change in order
 	 * for f2fs_sync_file to avoid data races when deciding checkpoint.
@@ -2192,7 +2191,6 @@ static inline struct page *f2fs_pagecache_get_page(
 		f2fs_show_injection_info(FAULT_PAGE_GET);
 		return NULL;
 	}
-
 	return pagecache_get_page(mapping, index, fgp_flags, gfp_mask);
 }
 
@@ -2261,7 +2259,6 @@ static inline struct bio *f2fs_bio_alloc(struct f2fs_sb_info *sbi,
 		f2fs_show_injection_info(FAULT_ALLOC_BIO);
 		return NULL;
 	}
-
 	return bio_alloc(GFP_KERNEL, npages);
 }
 
@@ -2800,7 +2797,6 @@ static inline void *f2fs_kmalloc(struct f2fs_sb_info *sbi,
 		f2fs_show_injection_info(FAULT_KMALLOC);
 		return NULL;
 	}
-
 	return kmalloc(size, flags);
 }
 
@@ -2855,7 +2851,6 @@ static inline void *f2fs_kvmalloc(struct f2fs_sb_info *sbi,
 		f2fs_show_injection_info(FAULT_KVMALLOC);
 		return NULL;
 	}
-
 	return kvmalloc(size, flags);
 }
 

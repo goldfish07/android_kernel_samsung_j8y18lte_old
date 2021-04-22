@@ -624,8 +624,6 @@ static void kgsl_context_detach(struct kgsl_context *context)
 
 	trace_kgsl_context_detach(device, context);
 
-	context->timers[1] = local_clock();
-	pr_debug("KGSL: Detaching context %d, clock:%llu\n", context->id, context->timers[1]);
 	context->device->ftbl->drawctxt_detach(context);
 
 	/*
@@ -647,7 +645,6 @@ kgsl_context_destroy(struct kref *kref)
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
 	struct kgsl_device *device = context->device;
-	unsigned int id = context->id;
 
 	trace_kgsl_context_destroy(device, context);
 
@@ -679,13 +676,7 @@ kgsl_context_destroy(struct kref *kref)
 	kgsl_sync_timeline_destroy(context);
 	kgsl_process_private_put(context->proc_priv);
 
-	context->timers[2] = local_clock();
-	pr_debug("KGSL: Destroying context %d alive:%llu detached:%llu\n", id,
-			context->timers[1] - context->timers[0],
-			context->timers[2] - context->timers[1]);
-
 	device->ftbl->drawctxt_destroy(context);
-	pr_debug("KGSL: Destroyed  context %d\n", id);
 }
 
 struct kgsl_device *kgsl_get_device(int dev_idx)
@@ -1736,9 +1727,6 @@ long kgsl_ioctl_drawctxt_create(struct kgsl_device_private *dev_priv,
 		result = PTR_ERR(context);
 		goto done;
 	}
-	context->timers[0] = local_clock();
-	pr_debug("KGSL: Creating   context %d, clock:%llu tid:%d\n",
-			context->id, context->timers[0], context->tid);
 	trace_kgsl_context_create(dev_priv->device, context, param->flags);
 
 	/* Commit the pointer to the context in context_idr */

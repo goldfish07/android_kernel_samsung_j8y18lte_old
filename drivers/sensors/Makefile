@@ -66,3 +66,4 @@ obj-$(CONFIG_ST_LSM6DS3_SPI)	+= st_lsm6ds3_spi.o
 obj-$(CONFIG_SENSORS_LSM6DSL)	+= lsm6dsl_core.o
 obj-$(CONFIG_SENSORS_LSM6DSL_I2C)	+= lsm6dsl_i2c.o
 obj-$(CONFIG_SENSORS_LSM6DSL_SPI)	+= lsm6dsl_spi.o
+obj-$(CONFIG_SENSORS)		+= sensors_class.o

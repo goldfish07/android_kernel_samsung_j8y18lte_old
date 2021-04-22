@@ -408,10 +408,8 @@ static void do_msm_restart(enum reboot_mode reboot_mode, const char *cmd)
 	 * device will take the usual restart path.
 	 */
 
-	if (WDOG_BITE_ON_PANIC && in_panic) {
-		printk(KERN_NOTICE " WDOG_BITE_ON_PANIC : %d, in_panic : %d\n", WDOG_BITE_ON_PANIC, in_panic);
+	if (WDOG_BITE_ON_PANIC && in_panic)
 		msm_trigger_wdog_bite();
-	}
 #endif
 
 	scm_disable_sdi();

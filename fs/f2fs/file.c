@@ -517,7 +517,6 @@ void f2fs_truncate_data_blocks_range(struct dnode_of_data *dn, int count)
 
 	for (; count > 0; count--, addr++, dn->ofs_in_node++) {
 		block_t blkaddr = le32_to_cpu(*addr);
-
 		if (blkaddr == NULL_ADDR)
 			continue;
 
@@ -673,7 +672,6 @@ int f2fs_truncate(struct inode *inode)
 		f2fs_show_injection_info(FAULT_TRUNCATE);
 		return -EIO;
 	}
-
 	/* we should check inline_data size */
 	if (!f2fs_may_inline_data(inode)) {
 		err = f2fs_convert_inline_inode(inode);

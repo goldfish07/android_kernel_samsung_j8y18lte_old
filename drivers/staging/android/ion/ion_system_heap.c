@@ -751,10 +751,6 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 		goto err_create_cached_pools;
 
 	heap->heap.debug_show = ion_system_heap_debug_show;
-	if (!system_heap)
-		system_heap = heap;
-	else
-		pr_err("system_heap had been already created\n");
 	return &heap->heap;
 
 err_create_cached_pools:

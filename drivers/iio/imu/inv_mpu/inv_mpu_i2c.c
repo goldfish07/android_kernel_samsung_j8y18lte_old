@@ -329,7 +329,6 @@ static void inv_enable_acc_gyro(struct inv_mpu_state *st)
 	inv_check_sensor_on(st);
 	set_inv_enable(indio_dev);
 }
-
 static int inv_acc_gyro_early_buff_init(struct iio_dev *indio_dev)
 {
 	int i = 0, err = 0;

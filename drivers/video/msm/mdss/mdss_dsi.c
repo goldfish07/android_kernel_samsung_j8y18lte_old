@@ -438,7 +438,6 @@ static int mdss_dsi_panel_power_ulp(struct mdss_panel_data *pdata,
 		 * Core power module need to be controlled along with
 		 * DSI core clocks.
 		 */
-
 		if (DSI_CORE_PM == i)
 			continue;
 		if (DSI_PANEL_PM == i)

@@ -1,10 +1,10 @@
 /*
  *  Sysfs interface for the universal power supply monitor class
  *
- *  Copyright  2007  David Woodhouse <dwmw2@infradead.org>
- *  Copyright  2007  Anton Vorontsov <cbou@mail.ru>
- *  Copyright  2004  Szabolcs Gyurko
- *  Copyright  2003  Ian Molton <spyro@f2s.com>
+ *  Copyright © 2007  David Woodhouse <dwmw2@infradead.org>
+ *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
+ *  Copyright © 2004  Szabolcs Gyurko
+ *  Copyright © 2003  Ian Molton <spyro@f2s.com>
  *
  *  Modified: 2004, Oct     Szabolcs Gyurko
  *
@@ -300,6 +300,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(cycle_count_id),
 	POWER_SUPPLY_ATTR(safety_timer_expired),
 	POWER_SUPPLY_ATTR(restricted_charging),
+	POWER_SUPPLY_ATTR(current_capability),
+	POWER_SUPPLY_ATTR(typec_mode),
 	POWER_SUPPLY_ATTR(allow_hvdcp3),
 	POWER_SUPPLY_ATTR(max_pulse_allowed),
 	POWER_SUPPLY_ATTR(enable_aicl),

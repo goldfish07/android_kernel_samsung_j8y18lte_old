@@ -160,11 +160,6 @@ static void __do_user_fault(struct task_struct *tsk, unsigned long addr,
 		show_regs(regs);
 	}
 
-	if (current->pid == 0x1) {
-		pr_err("[%s] trap before tragedy\n", current->comm);
-		panic("init");
-	}
-
 	tsk->thread.fault_address = addr;
 	tsk->thread.fault_code = esr;
 	si.si_signo = sig;
@@ -284,12 +279,13 @@ static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,
 		mm_flags |= FAULT_FLAG_WRITE;
 	}
 
-	/*
-	 * PAN bit set implies the fault happened in kernel space, but not
-	 * in the arch's user access functions.
-	 */
-	if (IS_ENABLED(CONFIG_ARM64_PAN) && (regs->pstate & PSR_PAN_BIT))
-		goto no_context;
+	if (addr < USER_DS && is_permission_fault(esr, regs)) {
+		if (is_el1_instruction_abort(esr))
+			die("Attempting to execute userspace memory", regs, esr);
+
+		if (!search_exception_tables(regs->pc))
+			panic("Accessing user space memory outside uaccess.h routines");
+	}
 
 	/*
 	 * As per x86, we may deadlock here. However, since the kernel only
@@ -433,13 +429,6 @@ static int __kprobes do_translation_fault(unsigned long addr,
 	return 0;
 }
 
-static int do_alignment_fault(unsigned long addr, unsigned int esr,
-			      struct pt_regs *regs)
-{
-	do_bad_area(addr, esr, regs);
-	return 0;
-}
-
 /*
  * This abort handler always returns "fault".
  */
@@ -488,7 +477,7 @@ static const struct fault_info {
 	{ do_bad,		SIGBUS,  0,		"synchronous parity error (translation table walk" },
 	{ do_bad,		SIGBUS,  0,		"synchronous parity error (translation table walk" },
 	{ do_bad,		SIGBUS,  0,		"unknown 32"			},
-	{ do_alignment_fault,	SIGBUS,  BUS_ADRALN,	"alignment fault"		},
+	{ do_bad,		SIGBUS,  BUS_ADRALN,	"alignment fault"		},
 	{ do_bad,		SIGBUS,  0,		"debug event"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 35"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 36"			},

@@ -90,8 +90,7 @@ enum kgsl_event_results {
 	{ KGSL_CONTEXT_TYPE_GL, "GL" }, \
 	{ KGSL_CONTEXT_TYPE_CL, "CL" }, \
 	{ KGSL_CONTEXT_TYPE_C2D, "C2D" }, \
-	{ KGSL_CONTEXT_TYPE_RS, "RS" }, \
-	{ KGSL_CONTEXT_TYPE_VK, "VK" }
+	{ KGSL_CONTEXT_TYPE_RS, "RS" }
 
 #define KGSL_CONTEXT_ID(_context) \
 	((_context != NULL) ? (_context)->id : KGSL_MEMSTORE_GLOBAL)
@@ -377,7 +376,6 @@ struct kgsl_context {
 	struct kgsl_pwr_constraint pwr_constraint;
 	unsigned int fault_count;
 	unsigned long fault_time;
-	u64 timers[3];
 };
 
 #define _context_comm(_c) \
@@ -406,12 +404,10 @@ struct kgsl_context {
  * @kobj: Pointer to a kobj for the sysfs directory for this process
  * @debug_root: Pointer to the debugfs root for this process
  * @stats: Memory allocation statistics for this process
- * @gpumem_mapped: KGSL memory mapped in the process address space
  * @syncsource_idr: sync sources created by this process
  * @syncsource_lock: Spinlock to protect the syncsource idr
  * @fd_count: Counter for the number of FDs for this process
  * @ctxt_count: Count for the number of contexts for this process
- * @ctxt_count_lock: Spinlock to protect ctxt_count
  */
 struct kgsl_process_private {
 	unsigned long priv;

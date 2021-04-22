@@ -2826,7 +2826,7 @@ int ext4_mb_release(struct super_block *sb)
 
 static inline int ext4_issue_discard(struct super_block *sb,
 		ext4_group_t block_group, ext4_grpblk_t cluster, int count,
-		unsigned long flags, struct bio **biop)
+		unsigned long flags)
 {
 	ext4_fsblk_t discard_block;
 
@@ -2835,114 +2835,7 @@ static inline int ext4_issue_discard(struct super_block *sb,
 	count = EXT4_C2B(EXT4_SB(sb), count);
 	trace_ext4_discard_blocks(sb,
 			(unsigned long long) discard_block, count);
-	if (biop) {
-		return __blkdev_issue_discard(sb->s_bdev,
-			(sector_t)discard_block << (sb->s_blocksize_bits - 9),
-			(sector_t)count << (sb->s_blocksize_bits - 9),
-			GFP_NOFS, flags, biop);
-	} else
-		return sb_issue_discard(sb, discard_block, count,
-					GFP_NOFS, flags);
-}
-
-static void ext4_free_data_in_buddy(struct super_block *sb,
-				    struct ext4_free_data *entry)
-{
-	struct ext4_buddy e4b;
-	struct ext4_group_info *db;
-	int err, count = 0, count2 = 0;
-
-	mb_debug(1, "gonna free %u blocks in group %u (0x%p):",
-		 entry->efd_count, entry->efd_group, entry);
-
-	err = ext4_mb_load_buddy(sb, entry->efd_group, &e4b);
-	/* we expect to find existing buddy because it's pinned */
-	BUG_ON(err != 0);
-
-	db = e4b.bd_info;
-	/* there are blocks to put in buddy to make them really free */
-	count += entry->efd_count;
-	count2++;
-	ext4_lock_group(sb, entry->efd_group);
-	/* Take it out of per group rb tree */
-	rb_erase(&entry->efd_node, &(db->bb_free_root));
-	mb_free_blocks(NULL, &e4b, entry->efd_start_cluster, entry->efd_count);
-
-	/*
-	 * Clear the trimmed flag for the group so that the next
-	 * ext4_trim_fs can trim it.
-	 * If the volume is mounted with -o discard, online discard
-	 * is supported and the free blocks will be trimmed online.
-	 */
-	if (!test_opt(sb, DISCARD))
-		EXT4_MB_GRP_CLEAR_TRIMMED(db);
-
-	if (!db->bb_free_root.rb_node) {
-		/* No more items in the per group rb tree
-		 * balance refcounts from ext4_mb_free_metadata()
-		 */
-		page_cache_release(e4b.bd_buddy_page);
-		page_cache_release(e4b.bd_bitmap_page);
-	}
-	ext4_unlock_group(sb, entry->efd_group);
-	kmem_cache_free(ext4_free_data_cachep, entry);
-	ext4_mb_unload_buddy(&e4b);
-
-	mb_debug(1, "freed %u blocks in %u structures\n", count, count2);
-}
-
-/*
- * This function is called by the jbd2 layer once the commit has finished,
- * so we know we can free the blocks that were released with that commit.
- */
-void ext4_process_freed_data(struct super_block *sb, tid_t commit_tid)
-{
-	struct ext4_sb_info *sbi = EXT4_SB(sb);
-	struct ext4_free_data *entry, *tmp;
-	struct bio *discard_bio = NULL;
-	struct list_head freed_data_list;
-	struct list_head *cut_pos = NULL;
-	int type = REQ_WRITE | REQ_DISCARD | REQ_PRIO;
-	int err;
-
-	INIT_LIST_HEAD(&freed_data_list);
-
-	spin_lock(&sbi->s_md_lock);
-	list_for_each_entry(entry, &sbi->s_freed_data_list, efd_list) {
-		if (entry->efd_tid != commit_tid)
-			break;
-		cut_pos = &entry->efd_list;
-	}
-	if (cut_pos)
-		list_cut_position(&freed_data_list, &sbi->s_freed_data_list,
-				  cut_pos);
-	spin_unlock(&sbi->s_md_lock);
-
-	if (test_opt(sb, DISCARD)) {
-		list_for_each_entry(entry, &freed_data_list, efd_list) {
-			err = ext4_issue_discard(sb, entry->efd_group,
-						 entry->efd_start_cluster,
-						 entry->efd_count,
-						 BLKDEV_DISCARD_SYNC,
-						 &discard_bio);
-			if (err && err != -EOPNOTSUPP) {
-				ext4_msg(sb, KERN_WARNING, "discard request in"
-					 " group:%d block:%d count:%d failed"
-					 " with %d", entry->efd_group,
-					 entry->efd_start_cluster,
-					 entry->efd_count, err);
-			} else if (err == -EOPNOTSUPP)
-				break;
-		}
-
-		if (discard_bio) {
-			submit_bio_wait(type, discard_bio);
-			bio_put(discard_bio);
-		}
-	}
-
-	list_for_each_entry_safe(entry, tmp, &freed_data_list, efd_list)
-		ext4_free_data_in_buddy(sb, entry);
+	return sb_issue_discard(sb, discard_block, count, GFP_NOFS, flags);
 }
 
 int __init ext4_init_mballoc(void)
@@ -4932,9 +4825,7 @@ do_more:
 #endif
 	trace_ext4_mballoc_free(sb, inode, block_group, bit, count_clusters);
 
-	/* __GFP_NOFAIL: retry infinitely, ignore TIF_MEMDIE and memcg limit. */
-	err = ext4_mb_load_buddy_gfp(sb, block_group, &e4b,
-				     GFP_NOFS|__GFP_NOFAIL);
+	err = ext4_mb_load_buddy(sb, block_group, &e4b);
 	if (err)
 		goto error_return;
 
@@ -4964,7 +4855,7 @@ do_more:
 		 */
 		if (test_opt(sb, DISCARD)) {
 			err = ext4_issue_discard(sb, block_group, bit, count,
-						 0, NULL);
+						 0);
 			if (err && err != -EOPNOTSUPP)
 				ext4_msg(sb, KERN_WARNING, "discard request in"
 					 " group:%d block:%d count:%lu failed"
@@ -5188,7 +5079,7 @@ __acquires(bitlock)
 	 */
 	mb_mark_used(e4b, &ex);
 	ext4_unlock_group(sb, group);
-	ret = ext4_issue_discard(sb, group, start, count, blkdev_flags, NULL);
+	ret = ext4_issue_discard(sb, group, start, count, blkdev_flags);
 	ext4_lock_group(sb, group);
 	mb_free_blocks(NULL, e4b, start, ex.fe_len);
 	return ret;

@@ -3292,7 +3292,6 @@ static void __ref do_core_control(long temp)
 	}
 	mutex_unlock(&core_control_mutex);
 }
-
 /* Call with core_control_mutex locked */
 static int __ref update_offline_cores(int val)
 {
@@ -4376,12 +4375,14 @@ int msm_thermal_set_cluster_freq(uint32_t cluster, uint32_t freq, bool is_max)
 				if (freq >= cluster_ptr->freq_table[cluster_ptr->freq_idx_high].frequency) {
 					for_each_cpu_mask(i, cluster_ptr->cluster_cores) {
 						cpus[i].mitigation_by_engine = false;
-					}
+					
+}
 				}
 				else
 					for_each_cpu_mask(i, cluster_ptr->cluster_cores) {
 						cpus[i].mitigation_by_engine = true;
-					}
+					
+}
 			}
 #endif
 			pr_debug("Update Cluster%d %s frequency to %d\n",

@@ -379,7 +379,6 @@ int msm_bus_dbg_rec_transaction(const struct msm_bus_client_handle *pdata,
 			rt_mutex_unlock(&msm_bus_dbg_cllist_lock);
 			return -EINVAL;
 		}
-		pr_err("\n%s setting up debugfs %s", __func__, pdata->name);
 		cldata->file = debugfs_create_file(pdata->name, S_IRUGO,
 				clients, (void *)pdata, &client_data_fops);
 	}
@@ -551,7 +550,6 @@ static ssize_t  msm_bus_dbg_update_request_write(struct file *file,
 	int found = 0;
 	uint32_t clid;
 	ssize_t res = cnt;
-	
 	if (!buf || IS_ERR(buf)) {
 		MSM_BUS_ERR("Memory allocation for buffer failed\n");
 		return -ENOMEM;
@@ -564,11 +562,10 @@ static ssize_t  msm_bus_dbg_update_request_write(struct file *file,
 		res = -EFAULT;
 		goto out;
 	}
-
 	buf[cnt] = '\0';
 	chid = buf;
 	MSM_BUS_DBG("buffer: %s\n size: %zu\n", buf, sizeof(ubuf));
-	
+
 	rt_mutex_lock(&msm_bus_dbg_cllist_lock);
 	list_for_each_entry(cldata, &cl_list, list) {
 		if (strnstr(chid, cldata->pdata->name, cnt)) {
@@ -602,9 +599,9 @@ static ssize_t  msm_bus_dbg_update_request_write(struct file *file,
 		}
 	}
 	rt_mutex_unlock(&msm_bus_dbg_cllist_lock);
+
 	if (found)
 		msm_bus_scale_client_update_request(clid, index);
-	
 
 out:
 	kfree(buf);

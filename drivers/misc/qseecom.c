@@ -530,7 +530,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_APP_START_COMMAND: {
 			struct qseecom_load_app_ireq *req;
 			struct qseecom_load_app_64bit_ireq *req_64bit;
-
 			smc_id = TZ_OS_APP_START_ID;
 			desc.arginfo = TZ_OS_APP_START_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -552,7 +551,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		}
 		case QSEOS_APP_SHUTDOWN_COMMAND: {
 			struct qseecom_unload_app_ireq *req;
-
 			req = (struct qseecom_unload_app_ireq *)req_buf;
 			smc_id = TZ_OS_APP_SHUTDOWN_ID;
 			desc.arginfo = TZ_OS_APP_SHUTDOWN_ID_PARAM_ID;
@@ -583,7 +581,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_APP_REGION_NOTIFICATION: {
 			struct qsee_apps_region_info_ireq *req;
 			struct qsee_apps_region_info_64bit_ireq *req_64bit;
-
 			smc_id = TZ_OS_APP_REGION_NOTIFICATION_ID;
 			desc.arginfo =
 				TZ_OS_APP_REGION_NOTIFICATION_ID_PARAM_ID;
@@ -606,7 +603,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_LOAD_SERV_IMAGE_COMMAND: {
 			struct qseecom_load_lib_image_ireq *req;
 			struct qseecom_load_lib_image_64bit_ireq *req_64bit;
-
 			smc_id = TZ_OS_LOAD_SERVICES_IMAGE_ID;
 			desc.arginfo = TZ_OS_LOAD_SERVICES_IMAGE_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -637,7 +633,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_REGISTER_LISTENER: {
 			struct qseecom_register_listener_ireq *req;
 			struct qseecom_register_listener_64bit_ireq *req_64bit;
-
 			desc.arginfo =
 				TZ_OS_REGISTER_LISTENER_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -667,7 +662,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		}
 		case QSEOS_DEREGISTER_LISTENER: {
 			struct qseecom_unregister_listener_ireq *req;
-
 			req = (struct qseecom_unregister_listener_ireq *)
 				req_buf;
 			smc_id = TZ_OS_DEREGISTER_LISTENER_ID;
@@ -678,7 +672,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		}
 		case QSEOS_LISTENER_DATA_RSP_COMMAND: {
 			struct qseecom_client_listener_data_irsp *req;
-
 			req = (struct qseecom_client_listener_data_irsp *)
 				req_buf;
 			smc_id = TZ_OS_LISTENER_RESPONSE_HANDLER_ID;
@@ -720,7 +713,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_LOAD_EXTERNAL_ELF_COMMAND: {
 			struct qseecom_load_app_ireq *req;
 			struct qseecom_load_app_64bit_ireq *req_64bit;
-
 			smc_id = TZ_OS_LOAD_EXTERNAL_IMAGE_ID;
 			desc.arginfo = TZ_OS_LOAD_SERVICES_IMAGE_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -750,7 +742,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_CLIENT_SEND_DATA_COMMAND: {
 			struct qseecom_client_send_data_ireq *req;
 			struct qseecom_client_send_data_64bit_ireq *req_64bit;
-
 			smc_id = TZ_APP_QSAPP_SEND_DATA_ID;
 			desc.arginfo = TZ_APP_QSAPP_SEND_DATA_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -808,7 +799,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		}
 		case QSEOS_RPMB_PROVISION_KEY_COMMAND: {
 			struct qseecom_client_send_service_ireq *req;
-
 			req = (struct qseecom_client_send_service_ireq *)
 				req_buf;
 			smc_id = TZ_OS_RPMB_PROVISION_KEY_ID;
@@ -837,7 +827,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 				(struct qseecom_key_generate_ireq) -
 				sizeof(uint32_t));
 			char *tzbuf = kzalloc(tzbuflen, GFP_KERNEL);
-
 			if (!tzbuf)
 				return -ENOMEM;
 			memset(tzbuf, 0, tzbuflen);
@@ -923,7 +912,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_TEE_OPEN_SESSION: {
 			struct qseecom_qteec_ireq *req;
 			struct qseecom_qteec_64bit_ireq *req_64bit;
-
 			smc_id = TZ_APP_GPAPP_OPEN_SESSION_ID;
 			desc.arginfo = TZ_APP_GPAPP_OPEN_SESSION_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -978,7 +966,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_TEE_INVOKE_COMMAND: {
 			struct qseecom_qteec_ireq *req;
 			struct qseecom_qteec_64bit_ireq *req_64bit;
-
 			smc_id = TZ_APP_GPAPP_INVOKE_COMMAND_ID;
 			desc.arginfo = TZ_APP_GPAPP_INVOKE_COMMAND_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -1033,7 +1020,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_TEE_CLOSE_SESSION: {
 			struct qseecom_qteec_ireq *req;
 			struct qseecom_qteec_64bit_ireq *req_64bit;
-
 			smc_id = TZ_APP_GPAPP_CLOSE_SESSION_ID;
 			desc.arginfo = TZ_APP_GPAPP_CLOSE_SESSION_ID_PARAM_ID;
 			if (qseecom.qsee_version < QSEE_VERSION_40) {
@@ -1058,7 +1044,6 @@ static int qseecom_scm_call2(uint32_t svc_id, uint32_t tz_cmd_id,
 		case QSEOS_TEE_REQUEST_CANCELLATION: {
 			struct qseecom_qteec_ireq *req;
 			struct qseecom_qteec_64bit_ireq *req_64bit;
-
 			smc_id = TZ_APP_GPAPP_REQUEST_CANCELLATION_ID;
 			desc.arginfo =
 				TZ_APP_GPAPP_REQUEST_CANCELLATION_ID_PARAM_ID;
@@ -1515,7 +1500,6 @@ static int __qseecom_decrease_clk_ref_count(enum qseecom_ce_hw_instance ce)
 {
 	struct qseecom_clk *qclk;
 	int ret = 0;
-
 	mutex_lock(&clk_access_lock);
 	if (ce == CLK_QSEE)
 		qclk = &qseecom.qsee;
@@ -1605,7 +1589,6 @@ static int __qseecom_register_bus_bandwidth_needs(
 static int qseecom_perf_enable(struct qseecom_dev_handle *data)
 {
 	int ret = 0;
-
 	ret = qsee_vote_for_clock(data, CLK_DFAB);
 	if (ret) {
 		pr_err("Failed to vote for DFAB clock with err %d\n", ret);
@@ -1692,7 +1675,6 @@ static void __qseecom_disable_clk_scale_down(struct qseecom_dev_handle *data)
 static int __qseecom_enable_clk_scale_up(struct qseecom_dev_handle *data)
 {
 	int ret = 0;
-
 	if (qseecom.support_bus_scaling) {
 		ret = qseecom_scale_bus_bandwidth_timer(MEDIUM);
 		if (ret)
@@ -2683,7 +2665,6 @@ enable_clk_err:
 static int __qseecom_cleanup_app(struct qseecom_dev_handle *data)
 {
 	int ret = 1;	/* Set unload app */
-
 	wake_up_all(&qseecom.send_resp_wq);
 	if (qseecom.qsee_reentrancy_support)
 		mutex_unlock(&app_access_lock);
@@ -3676,7 +3657,6 @@ static int __qseecom_update_cmd_buf(void *msg, bool cleanup,
 		sg = sg_ptr->sgl;
 		if (sg_ptr->nents == 1) {
 			uint32_t *update;
-
 			if (__boundary_checks_offset(req, lstnr_resp, data, i))
 				goto err;
 			if ((data->type == QSEECOM_CLIENT_APP &&
@@ -5076,7 +5056,6 @@ EXPORT_SYMBOL(qseecom_send_command);
 int qseecom_set_bandwidth(struct qseecom_handle *handle, bool high)
 {
 	int ret = 0;
-
 	if ((handle == NULL) || (handle->dev == NULL)) {
 		pr_err("No valid kernel client\n");
 		return -EINVAL;
@@ -7355,7 +7334,6 @@ long qseecom_ioctl(struct file *file,
 			pr_err("failed qseecom_register_listener: %d\n", ret);
 		break;
 	}
-
 	case QSEECOM_IOCTL_UNREGISTER_LISTENER_REQ: {
 		if ((data->listener.id == 0) ||
 			(data->type != QSEECOM_LISTENER_SERVICE)) {

@@ -76,6 +76,15 @@ enum flat_binder_object_flags {
 	 * 10b: SCHED_RR
 	 * 11b: SCHED_BATCH
 	 */
+
+	/**
+ 	 * @FLAT_BINDER_FLAG_TXN_SECURITY_CTX: request security contexts
+ 	 *
+ 	 * Only when set, causes senders to include their security
+ 	 * context
+ 	 */
+ 	FLAT_BINDER_FLAG_TXN_SECURITY_CTX = 0x1000,
+
 	FLAT_BINDER_FLAG_SCHED_POLICY_MASK =
 		3U << FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT,
 
@@ -86,13 +95,6 @@ enum flat_binder_object_flags {
 	 * scheduling policy from the caller (for synchronous transactions).
 	 */
 	FLAT_BINDER_FLAG_INHERIT_RT = 0x800,
-	/**
-	 * @FLAT_BINDER_FLAG_TXN_SECURITY_CTX: request security contexts
-	 *
-	 * Only when set, causes senders to include their security
-	 * context
-	 */
-	FLAT_BINDER_FLAG_TXN_SECURITY_CTX = 0x1000,
 };
 
 #ifdef BINDER_IPC_32BIT

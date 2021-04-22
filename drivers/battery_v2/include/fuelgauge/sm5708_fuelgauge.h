@@ -17,7 +17,7 @@
 
 #include <linux/i2c.h>
 /* include <linux/mfd/sm5708.h> */
-#include "include/sec_charging_common.h"
+#include "../sec_charging_common.h"
 
 
 

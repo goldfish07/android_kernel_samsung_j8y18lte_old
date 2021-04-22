@@ -43,9 +43,7 @@ enum android_function_index {
 	ANDROID_UMS,
 	ANDROID_ACCESSORY,
 	ANDROID_AUDIO_SRC,
-#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	ANDROID_CHARGER,
-#endif
 	ANDROID_MIDI,
 	ANDROID_RNDIS_GSI,
 	ANDROID_ECM_GSI,
@@ -107,7 +105,7 @@ static enum android_function_index name_to_func_idx(const char *name)
 	if (!strncasecmp("AUDIO_SOURCE", name, FUNC_NAME_LEN))
 		return ANDROID_AUDIO_SRC;
 	if (!strncasecmp("CHARGING", name, FUNC_NAME_LEN))
-		return ANDROID_AUDIO_SRC;
+		return ANDROID_CHARGER;
 	if (!strncasecmp("MIDI", name, FUNC_NAME_LEN))
 		return ANDROID_MIDI;
 	if (!strncasecmp("RNDIS_GSI", name, FUNC_NAME_LEN))
@@ -120,8 +118,6 @@ static enum android_function_index name_to_func_idx(const char *name)
 		return ANDROID_MBIM_GSI;
 	if (!strncasecmp("DPL_GSI", name, FUNC_NAME_LEN))
 		return ANDROID_DPL_GSI;
-	if (!strncasecmp("IPC", name, FUNC_NAME_LEN))
-		return ANDROID_IPC;
 
 	return ANDROID_INVALID_FUNC;
 }

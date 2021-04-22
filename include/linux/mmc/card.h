@@ -18,12 +18,6 @@
 
 #define MMC_CARD_CMDQ_BLK_SIZE 512
 #define MAX_CNT_U64     0xFFFFFFFFFF
-#define MAX_CNT_U32     0x7FFFFFFF
-#define STATUS_MASK     (R1_ERROR | R1_CC_ERROR | R1_CARD_ECC_FAILED | R1_WP_VIOLATION | R1_OUT_OF_RANGE)
-#define HALT_UNHALT_ERR		0x00000001
-#define CQ_EN_DIS_ERR		0x00000002
-#define RPMB_SWITCH_ERR		0x00000004
-#define CQERR_MASK	(HALT_UNHALT_ERR | CQ_EN_DIS_ERR | RPMB_SWITCH_ERR)
 
 struct mmc_cid {
 	unsigned int		manfid;
@@ -775,6 +769,4 @@ extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
 extern int mmc_send_pon(struct mmc_card *card);
 extern void mmc_blk_cmdq_req_done(struct mmc_request *mrq);
-extern void mmc_cmdq_error_logging(struct mmc_card *card,
-		struct mmc_cmdq_req *cqrq, u32 status);
 #endif /* LINUX_MMC_CARD_H */

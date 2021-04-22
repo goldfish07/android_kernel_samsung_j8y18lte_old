@@ -187,6 +187,7 @@ static DEFINE_SPINLOCK(reg_spinlock);
 #define WCNSS_MAX_BUILD_VER_LEN		256
 #define WCNSS_MAX_CMD_LEN		(128)
 #define WCNSS_MIN_CMD_LEN		(3)
+#define WCNSS_CMD_INFO_LEN		2
 
 /* control messages from userspace */
 #define WCNSS_USR_CTRL_MSG_START  0x00000000
@@ -194,7 +195,6 @@ static DEFINE_SPINLOCK(reg_spinlock);
 #define WCNSS_USR_WLAN_MAC_ADDR   (WCNSS_USR_CTRL_MSG_START + 3)
 
 #define MAC_ADDRESS_STR "%02x:%02x:%02x:%02x:%02x:%02x"
-#define SHOW_MAC_ADDRESS_STR	"%02x:%02x:%02x:%02x:%02x:%02x\n"
 #define WCNSS_USER_MAC_ADDR_LENGTH	18
 
 /* message types */
@@ -250,9 +250,6 @@ static struct notifier_block wnb = {
 	.notifier_call = wcnss_notif_cb,
 };
 
-extern unsigned int system_rev;
-
-#define NVBIN_FILE_OLD "wlan/prima/WCNSS_qcom_wlan_nv_old.bin"
 #define NVBIN_FILE "wlan/prima/WCNSS_qcom_wlan_nv.bin"
 
 /* On SMD channel 4K of maximum data can be transferred, including message
@@ -460,11 +457,7 @@ static ssize_t wcnss_wlan_macaddr_store(struct device *dev,
 		       (char *)&macAddr[index], sizeof(char));
 	}
 
-	pr_info("%s: Write MAC Addr:" MAC_ADDRESS_STR "\n", __func__,
-		penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
-		penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
-		penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
-
+	pr_info("%s: Write MAC Addr: %pM\n", __func__, penv->wlan_nv_macAddr);
 	return count;
 }
 
@@ -474,10 +467,7 @@ static ssize_t wcnss_wlan_macaddr_show(struct device *dev,
 	if (!penv)
 		return -ENODEV;
 
-	return scnprintf(buf, PAGE_SIZE, SHOW_MAC_ADDRESS_STR,
-		penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
-		penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
-		penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
+	return scnprintf(buf, PAGE_SIZE, "%pM\n", penv->wlan_nv_macAddr);
 }
 
 static DEVICE_ATTR(wcnss_mac_addr, S_IRUSR | S_IWUSR,
@@ -1132,7 +1122,7 @@ void wcnss_log_debug_regs_on_bite(void)
 		pr_debug("wcnss: clock frequency is: %luHz\n", clk_rate);
 
 		if (clk_rate) {
-			wcnss_pronto_dump_regs();
+			wcnss_pronto_log_debug_regs();
 			if (wcnss_get_mux_control())
 				wcnss_log_iris_regs();
 		} else {
@@ -1152,7 +1142,7 @@ void wcnss_reset_fiq(bool clk_chk_en)
 		if (clk_chk_en) {
 			wcnss_log_debug_regs_on_bite();
 		} else {
-			wcnss_pronto_dump_regs();
+			wcnss_pronto_log_debug_regs();
 			if (wcnss_get_mux_control())
 				wcnss_log_iris_regs();
 		}
@@ -1666,10 +1656,8 @@ int wcnss_get_wlan_mac_address(char mac_addr[WLAN_MAC_ADDR_SIZE])
 		return -ENODEV;
 
 	memcpy(mac_addr, penv->wlan_nv_macAddr, WLAN_MAC_ADDR_SIZE);
-	pr_debug("%s: Get MAC Addr:" MAC_ADDRESS_STR "\n", __func__,
-		penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
-		penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
-		penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
+	pr_debug("%s: Get MAC Addr: %pM\n", __func__, penv->wlan_nv_macAddr);
+
 	return 0;
 }
 EXPORT_SYMBOL(wcnss_get_wlan_mac_address);
@@ -2396,22 +2384,12 @@ static void wcnss_nvbin_dnld(void)
 
 	down_read(&wcnss_pm_sem);
 
-	if (CONFIG_WLAN_USE_OLD_NV != 0 && system_rev <= CONFIG_WLAN_USE_OLD_NV) {
-		ret = request_firmware(&nv, NVBIN_FILE_OLD, dev);
-		
-		if (ret || !nv || !nv->data || !nv->size) {
-			pr_err("wcnss: %s: request_firmware failed for %s (ret = %d)\n",
-				__func__, NVBIN_FILE_OLD, ret);
-			goto out;
-		}
-	}else {
-		ret = request_firmware(&nv, NVBIN_FILE, dev);
-		
-		if (ret || !nv || !nv->data || !nv->size) {
-			pr_err("wcnss: %s: request_firmware failed for %s (ret = %d)\n",
-				__func__, NVBIN_FILE, ret);
-			goto out;
-		}
+	ret = request_firmware(&nv, NVBIN_FILE, dev);
+
+	if (ret || !nv || !nv->data || !nv->size) {
+		pr_err("wcnss: %s: request_firmware failed for %s (ret = %d)\n",
+			__func__, NVBIN_FILE, ret);
+		goto out;
 	}
 
 	/* First 4 bytes in nv blob is validity bitmap.
@@ -2662,56 +2640,56 @@ static int wcnss_ctrl_open(struct inode *inode, struct file *file)
 	return rc;
 }
 
-
-void process_usr_ctrl_cmd(u8 *buf, size_t len)
-{
-	u16 cmd = buf[0] << 8 | buf[1];
-
-	switch (cmd) {
-
-	case WCNSS_USR_HAS_CAL_DATA:
-		if (1 < buf[2])
-			pr_err("%s: Invalid data for cal %d\n", __func__,
-				buf[2]);
-		has_calibrated_data = buf[2];
-		break;
-
-	case WCNSS_USR_WLAN_MAC_ADDR:
-		memcpy(&penv->wlan_nv_macAddr,  &buf[2],
-				sizeof(penv->wlan_nv_macAddr));
-
-		pr_debug("%s: MAC Addr:" MAC_ADDRESS_STR "\n", __func__,
-			penv->wlan_nv_macAddr[0], penv->wlan_nv_macAddr[1],
-			penv->wlan_nv_macAddr[2], penv->wlan_nv_macAddr[3],
-			penv->wlan_nv_macAddr[4], penv->wlan_nv_macAddr[5]);
-		break;
-
-	default:
-		pr_err("%s: Invalid command %d\n", __func__, cmd);
-		break;
-	}
-}
-
 static ssize_t wcnss_ctrl_write(struct file *fp, const char __user
 			*user_buffer, size_t count, loff_t *position)
 {
 	int rc = 0;
+	u16 cmd;
 	u8 buf[WCNSS_MAX_CMD_LEN];
 
-	if (!penv || !penv->ctrl_device_opened || WCNSS_MAX_CMD_LEN < count
-			|| WCNSS_MIN_CMD_LEN > count)
+	if (!penv || !penv->ctrl_device_opened ||
+	    WCNSS_MAX_CMD_LEN < count || WCNSS_MIN_CMD_LEN > count)
 		return -EFAULT;
 
 	mutex_lock(&penv->ctrl_lock);
 	rc = copy_from_user(buf, user_buffer, count);
-	if (0 == rc)
-		process_usr_ctrl_cmd(buf, count);
+	if (rc) {
+		pr_err("%s: Failed to copy ctrl data\n", __func__);
+		goto exit;
+	}
 
+	cmd = buf[0] << 8 | buf[1];
+	switch (cmd) {
+	case WCNSS_USR_HAS_CAL_DATA:
+		if (buf[2] > 1) {
+			pr_err("%s: Invalid cal data %d\n", __func__, buf[2]);
+			rc = -EINVAL;
+			goto exit;
+		}
+		has_calibrated_data = buf[2];
+		break;
+
+	case WCNSS_USR_WLAN_MAC_ADDR:
+		if ((count - WCNSS_CMD_INFO_LEN) != WLAN_MAC_ADDR_SIZE) {
+			pr_err("%s: Invalid Mac addr %d\n", __func__, buf[2]);
+			rc = -EINVAL;
+			goto exit;
+		}
+
+		memcpy(&penv->wlan_nv_macAddr, &buf[2],
+		       sizeof(penv->wlan_nv_macAddr));
+		pr_debug("%s:MAC Addr: %pM\n", __func__, penv->wlan_nv_macAddr);
+		break;
+	default:
+		pr_err("%s: Invalid command %d\n", __func__, cmd);
+		rc = -EINVAL;
+		break;
+	}
+
+exit:
 	mutex_unlock(&penv->ctrl_lock);
-
 	return rc;
 }
-
 
 static const struct file_operations wcnss_ctrl_fops = {
 	.owner = THIS_MODULE,
@@ -3364,9 +3342,6 @@ static int wcnss_node_open(struct inode *inode, struct file *file)
 	struct platform_device *pdev;
 	int rc = 0;
 
-
-
-
 	if (!penv)
 		return -EFAULT;
 
@@ -3595,10 +3570,6 @@ wcnss_wlan_probe(struct platform_device *pdev)
 	mutex_init(&penv->vbat_monitor_mutex);
 	mutex_init(&penv->pm_qos_mutex);
 	init_waitqueue_head(&penv->read_wait);
-	penv->user_cal_rcvd = 0;
-	penv->user_cal_read = 0;
-	penv->user_cal_exp_size = 0;
-	penv->user_cal_available = false;
 
 	penv->user_cal_rcvd = 0;
 	penv->user_cal_read = 0;

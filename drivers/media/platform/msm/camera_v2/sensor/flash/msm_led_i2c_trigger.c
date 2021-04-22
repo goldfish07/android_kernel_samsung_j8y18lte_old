@@ -494,7 +494,6 @@ static int32_t msm_led_get_dt_data(struct device_node *of_node,
 				fctrl->flash_trigger_name[i],
 				&fctrl->flash_trigger[i]);
 		}
-
 	} else { /*Handle LED Flash Ctrl by GPIO*/
 		power_info->gpio_conf =
 			 kzalloc(sizeof(struct msm_camera_gpio_conf),

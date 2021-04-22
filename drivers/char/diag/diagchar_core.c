@@ -408,12 +408,10 @@ static uint32_t diag_translate_kernel_to_user_mask(uint32_t peripheral_mask)
 
 	return ret;
 }
-
 int diag_mask_param(void)
 {
 	return diag_mask_clear_param;
 }
-
 void diag_clear_masks(int pid)
 {
 	int ret;

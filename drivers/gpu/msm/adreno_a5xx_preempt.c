@@ -195,40 +195,6 @@ static struct adreno_ringbuffer *a5xx_next_ringbuffer(
 {
 	struct adreno_ringbuffer *rb, *next = NULL;
 	unsigned int i;
-	unsigned int bit;
-
-	/*
-	 * Pickup highest priority starved rb if any.
-	 */
-	bit = ffs(adreno_dev->preempt.starved);
-
-	while (bit != 0) {
-		rb = &adreno_dev->ringbuffers[bit - 1];
-
-		if (_check_busy(rb)) {
-			/*
-			 * If the current RB is already starved and
-			 * it has not been running for the minimum time slice
-			 * then allow it to run.
-			 */
-			if ((adreno_dev->cur_rb->sched_timer != 0) &&
-				(time_before(jiffies,
-					adreno_dev->cur_rb->sched_timer +
-					msecs_to_jiffies(
-					adreno_dispatch_time_slice))))
-				return adreno_dev->cur_rb;
-
-			rb->sched_timer = jiffies;
-			return rb;
-		}
-
-		/*
-		 * Clear the bit if rb is not really busy.
-		 */
-		clear_bit(rb->id, &adreno_dev->preempt.starved);
-
-		bit = ffs(adreno_dev->preempt.starved);
-	}
 
 	/* Now find the highest priority busy ringbuffer */
 	FOR_EACH_RINGBUFFER(adreno_dev, rb, i) {
@@ -295,10 +261,6 @@ void a5xx_preemption_trigger(struct adreno_device *adreno_dev)
 	/* Turn off the dispatcher timer */
 	del_timer(&adreno_dev->dispatcher.timer);
 
-	/* Turn off the starvation timer for the new ringbuffer */
-	del_timer(&next->timer);
-	clear_bit(next->id, &adreno_dev->preempt.starved);
-
 	/*
 	 * This is the most critical section - we need to take care not to race
 	 * until we have programmed the CP for the switch
@@ -353,8 +315,6 @@ static void _a5xx_starvation_timer(unsigned long data)
 	 */
 	if (!_check_busy(rb))
 		return;
-
-	set_bit(rb->id, &adreno_dev->preempt.starved);
 
 	a5xx_preemption_trigger(adreno_dev);
 

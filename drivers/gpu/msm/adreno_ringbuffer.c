@@ -213,9 +213,6 @@ int adreno_ringbuffer_start(struct adreno_device *adreno_dev,
 	struct adreno_ringbuffer *rb;
 	int i;
 
-	/* Clear the starved ringbuffer mask */
-	adreno_dev->preempt.starved = 0;
-
 	/* Setup the ringbuffers state before we start */
 	FOR_EACH_RINGBUFFER(adreno_dev, rb, i) {
 		kgsl_sharedmem_set(device, &(rb->buffer_desc),

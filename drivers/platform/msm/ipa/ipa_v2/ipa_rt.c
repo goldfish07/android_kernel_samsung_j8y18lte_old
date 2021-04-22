@@ -1203,7 +1203,6 @@ int __ipa_del_rt_rule(u32 rule_hdl)
 			return -EINVAL;
 		}
 	}
-
 	/* Adding check to confirm still
 	 * header entry present in header table or not
 	 */

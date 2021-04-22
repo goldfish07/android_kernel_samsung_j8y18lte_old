@@ -1477,7 +1477,6 @@ static long rndis_qc_ioctl(struct file *fp, unsigned cmd, unsigned long arg)
 		ret = -ENODEV;
 		goto fail;
 	}
-
 	rndis_qc_unlock(&_rndis_qc->ioctl_excl);
 
 fail:

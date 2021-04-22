@@ -17,7 +17,6 @@
 #include <linux/device.h>
 #include <linux/devfreq.h>
 #include <linux/fault-inject.h>
-#include <linux/wakelock.h>
 
 #include <linux/mmc/core.h>
 #include <linux/mmc/card.h>
@@ -485,8 +484,6 @@ struct mmc_host {
 #define MMC_CAP2_SLEEP_AWAKE	(1 << 28)	/* Use Sleep/Awake (CMD5) */
 /* use max discard ignoring max_busy_timeout parameter */
 #define MMC_CAP2_MAX_DISCARD_SIZE	(1 << 29)
-#define MMC_CAP2_BKOPS_EN       (1 << 30)
-#define MMC_CAP2_CACHE_BARRIER		(1 << 31)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
@@ -546,8 +543,6 @@ struct mmc_host {
 	int			claim_cnt;	/* "claim" nesting count */
 
 	struct delayed_work	detect;
-        struct wake_lock        detect_wake_lock;
-        const char              *wlock_name;
 	int			detect_change;	/* card detect flag */
 	struct mmc_slot		slot;
 
@@ -633,9 +628,9 @@ struct mmc_host {
 	void *cmdq_private;
 	struct mmc_request	*err_mrq;
 	bool sdr104_wa;
-        unsigned int            card_detect_cnt;
-        int (*sdcard_uevent)(struct mmc_card *card);
-        int                     pm_progress;    /* pm_notify is in progress */
+	unsigned int         card_detect_cnt;
+    int (*sdcard_uevent)(struct mmc_card *card);
+    int                  pm_progress;    /* pm_notify is in progress */
 	unsigned long		private[0] ____cacheline_aligned;
 };
 

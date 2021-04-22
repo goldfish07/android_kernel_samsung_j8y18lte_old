@@ -253,7 +253,6 @@
 									\
 	.rodata1          : AT(ADDR(.rodata1) - LOAD_OFFSET) {		\
 		*(.rodata1)						\
-		RO_AFTER_INIT_DATA	/* Read only after init */	\
 	}								\
 									\
 	BUG_TABLE							\

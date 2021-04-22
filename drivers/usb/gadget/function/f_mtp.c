@@ -1411,7 +1411,6 @@ mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 	dev->mtp_rx_req_len = mtp_rx_req_len;
 	dev->mtp_tx_req_len = mtp_tx_req_len;
 	dev->mtp_tx_reqs = mtp_tx_reqs;
-
 	/* allocate interface ID(s) */
 	id = usb_interface_id(c, f);
 	if (id < 0)

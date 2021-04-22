@@ -1,4 +1,4 @@
-/*
+ /*
  *  linux/include/linux/mmc/sdhci.h - Secure Digital Host Controller Interface
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
@@ -303,12 +303,6 @@ struct sdhci_host {
 	int reset_wa_applied; /* reset workaround status */
 	ktime_t reset_wa_t; /* time when the reset workaround is applied */
 	int reset_wa_cnt; /* total number of times workaround is used */
-
-	u32 send_cmd_idx;
-	s64 send_cmd_timestamp;
-	u32 irq_cmd_idx;
-	s64 irq_timestamp;
-	s64 finish_tasklet_timestamp;
 
 	unsigned long private[0] ____cacheline_aligned;
 };

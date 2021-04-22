@@ -258,7 +258,6 @@ int fg_sram_write(struct fg_chip *chip, u16 address, u8 offset,
 	} else {
 		flags = FG_IMA_DEFAULT;
 	}
-
 	/*
 	 * Atomic access mean waiting upon SOC_UPDATE interrupt from
 	 * FG_ALG and do the transaction after that. This is to make

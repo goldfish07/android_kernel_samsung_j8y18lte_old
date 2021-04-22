@@ -1165,13 +1165,8 @@ start_trb_queuing:
 			if (list_is_last(&req->list, &dep->request_list))
 				last_one = 1;
 
-                        if (usb_endpoint_dir_in(dep->endpoint.desc))
-	        		dwc3_prepare_one_trb(dep, req, dma, length,
-				        	last_one, false, 0, 0);
-                        else
-                                dwc3_prepare_one_trb(dep, req, dma, length,
-                                                1, false, 0, 0);
-
+			dwc3_prepare_one_trb(dep, req, dma, length,
+					last_one, false, 0, 0);
 
 			dbg_queue(dep->number, &req->request, 0);
 			if (last_one)
@@ -1942,9 +1937,6 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on, int suspend)
 	ktime_t start, diff;
 
 	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-
-	pr_info("usb: %s is_on:%d \n", __func__,is_on);
-
 	if (is_on) {
 		if (dwc->revision <= DWC3_REVISION_187A) {
 			reg &= ~DWC3_DCTL_TRGTULST_MASK;
@@ -2046,8 +2038,6 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	is_on = !!is_on;
 
-	pr_info("usb: %s is_on: %d\n", __func__,is_on);
-
 	dwc->softconnect = is_on;
 
 	if ((dwc->is_drd && !dwc->vbus_active) || !dwc->gadget_driver) {
@@ -2125,8 +2115,6 @@ static int dwc3_gadget_vbus_session(struct usb_gadget *_gadget, int is_active)
 {
 	struct dwc3 *dwc = gadget_to_dwc(_gadget);
 	unsigned long flags;
-
-	pr_info("usb: %s is_active: %d \n", __func__,is_active);
 
 	if (!dwc->is_drd)
 		return -EPERM;
@@ -2944,7 +2932,6 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 {
 	int			reg;
 
-	pr_info("usb: %s\n", __func__);
 	dev_dbg(dwc->dev, "Notify OTG from %s\n", __func__);
 	dwc->b_suspend = false;
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_NOTIFY_OTG_EVENT, 0);
@@ -2982,7 +2969,6 @@ void dwc3_gadget_usb3_phy_suspend(struct dwc3 *dwc, int suspend)
 static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
-	pr_info("usb: %s\n", __func__);
 
 	/*
 	 * WORKAROUND: DWC3 revisions <1.88a have an issue which
@@ -3119,31 +3105,25 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 		dwc->gadget.ep0->maxpacket = 512;
 		dwc->gadget.speed = USB_SPEED_SUPER;
-		pr_info("usb:: %s (SS)\n", __func__);
 		break;
 	case DWC3_DCFG_HIGHSPEED:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(64);
 		dwc->gadget.ep0->maxpacket = 64;
 		dwc->gadget.l1_supported = false;
 		dwc->gadget.speed = USB_SPEED_HIGH;
-		pr_info("usb:: %s (HS)\n", __func__);
 		break;
 	case DWC3_DCFG_FULLSPEED2:
 	case DWC3_DCFG_FULLSPEED1:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(64);
 		dwc->gadget.ep0->maxpacket = 64;
 		dwc->gadget.speed = USB_SPEED_FULL;
-		pr_info("usb:: %s (FS)\n", __func__);
 		break;
 	case DWC3_DCFG_LOWSPEED:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(8);
 		dwc->gadget.ep0->maxpacket = 8;
 		dwc->gadget.speed = USB_SPEED_LOW;
-		pr_info("usb:: %s (LS)\n", __func__);
 		break;
 	}
-
-	dwc->eps[1]->endpoint.maxpacket = dwc->gadget.ep0->maxpacket;
 
 	/* Enable USB2 LPM Capability */
 
@@ -3215,7 +3195,7 @@ static void dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc, bool remote_wakeup)
 {
 	bool perform_resume = true;
 
-	pr_info("usb: %s\n", __func__);
+	dev_dbg(dwc->dev, "%s\n", __func__);
 
 	/*
 	 * Identify if it is called from wakeup_interrupt() context for bus
@@ -3516,7 +3496,7 @@ static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 		dwc->dbg_gadget_events.overflow++;
 		break;
 	default:
-		pr_info("usb: [%s] UNKNOWN IRQ %d\n", __func__, event->type);
+		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
 		dwc->dbg_gadget_events.unknown_event++;
 	}
 

@@ -732,7 +732,6 @@ static struct rcg_clk blsp1_qup1_i2c_apps_clk_src = {
 
 static struct clk_freq_tbl ftbl_blsp_spi_apps_clk_src[] = {
 	F(    960000,              xo,   10,    1,     2),
-	F(   4000000, gpll0_main_div2,   10,    1,    10),
 	F(   4800000,              xo,    4,    0,     0),
 	F(   9600000,              xo,    2,    0,     0),
 	F(  12500000, gpll0_main_div2,   16,    1,     2),
@@ -1134,8 +1133,6 @@ static struct rcg_clk csi2p_clk_src = {
 };
 
 static struct clk_freq_tbl ftbl_camss_gp0_clk_src[] = {
-	F(19200000,           xo,    1,    0,    0),
-	F(24000000,           gpll0,    1,    2,    67),
 	F(  50000000, gpll0_main_div2,    8,    0,     0),
 	F( 100000000,           gpll0,    8,    0,     0),
 	F( 200000000,           gpll0,    4,    0,     0),
@@ -2804,7 +2801,7 @@ static struct branch_clk gcc_oxili_timer_clk = {
 	.base = &virt_bases[GFX_BASE],
 	.c = {
 		.dbg_name = "gcc_oxili_timer_clk",
-		.parent = &xo_clk_src.c, 
+		.parent = &xo_clk_src.c,
 		.ops = &clk_ops_branch,
 		CLK_INIT(gcc_oxili_timer_clk.c),
 	},
@@ -2967,7 +2964,6 @@ static struct branch_clk gcc_usb3_aux_clk = {
 static struct branch_clk gcc_usb_phy_cfg_ahb_clk = {
 	.cbcr_reg = USB_PHY_CFG_AHB_CBCR,
 	.has_sibling = 1,
-	.check_enable_bit = true,
 	.no_halt_check_on_disable = true,
 	.base = &virt_bases[GCC_BASE],
 	.c = {

@@ -1840,7 +1840,6 @@ config TEST_UDELAY
 
 	  If unsure, say N.
 
-
 config PANIC_ON_DATA_CORRUPTION
 	bool "Cause a Kernel Panic When Data Corruption is detected"
 	help

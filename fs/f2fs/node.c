@@ -1903,7 +1903,6 @@ int f2fs_wait_on_node_pages_writeback(struct f2fs_sb_info *sbi,
 		ret2 = -EIO;
 	if (!ret)
 		ret = ret2;
-
 	return ret;
 }
 
@@ -2334,7 +2333,6 @@ retry:
 		f2fs_show_injection_info(FAULT_ALLOC_NID);
 		return false;
 	}
-
 	spin_lock(&nm_i->nid_list_lock);
 
 	if (unlikely(nm_i->available_nids == 0)) {

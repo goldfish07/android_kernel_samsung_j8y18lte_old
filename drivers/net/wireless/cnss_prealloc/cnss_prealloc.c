@@ -25,7 +25,7 @@
 
 static DEFINE_SPINLOCK(alloc_lock);
 
-#ifdef CONFIG_SLUB_DEBUG_ON
+#ifdef CONFIG_SLUB_DEBUG
 #define WCNSS_MAX_STACK_TRACE			64
 #endif
 
@@ -36,9 +36,9 @@ static struct dentry *debug_base;
 
 struct wcnss_prealloc {
 	int occupied;
-	size_t size;
+	unsigned int size;
 	void *ptr;
-#ifdef CONFIG_SLUB_DEBUG_ON
+#ifdef CONFIG_SLUB_DEBUG
 	unsigned long stack_trace[WCNSS_MAX_STACK_TRACE];
 	struct stack_trace trace;
 #endif
@@ -192,7 +192,7 @@ void wcnss_prealloc_deinit(void)
 	cnss_skb_prealloc_deinit();
 }
 
-#ifdef CONFIG_SLUB_DEBUG_ON
+#ifdef CONFIG_SLUB_DEBUG
 static void wcnss_prealloc_save_stack_trace(struct wcnss_prealloc *entry)
 {
 	struct stack_trace *trace = &entry->trace;
@@ -308,7 +308,7 @@ int wcnss_skb_prealloc_put(struct sk_buff *skb)
 EXPORT_SYMBOL(wcnss_skb_prealloc_put);
 #endif
 
-#ifdef CONFIG_SLUB_DEBUG_ON
+#ifdef CONFIG_SLUB_DEBUG
 void wcnss_prealloc_check_memory_leak(void)
 {
 	int i;
@@ -323,15 +323,15 @@ void wcnss_prealloc_check_memory_leak(void)
 			leak_detected = true;
 		}
 
-		pr_err("Size: %zu, addr: %pK, backtrace:\n",
-		       wcnss_allocs[i].size, wcnss_allocs[i].ptr);
+		pr_err("Size: %u, addr: %pK, backtrace:\n",
+				wcnss_allocs[i].size, wcnss_allocs[i].ptr);
 		print_stack_trace(&wcnss_allocs[i].trace, 1);
 	}
 
 }
 #endif
 
-#if defined(CONFIG_WCNSS_SKB_PRE_ALLOC) && defined(CONFIG_SLUB_DEBUG_ON)
+#if defined(CONFIG_WCNSS_SKB_PRE_ALLOC) && defined(CONFIG_SLUB_DEBUG)
 /* Check memory leak for socket buffer pre-alloc memeory pool */
 void wcnss_skb_prealloc_check_memory_leak(void)
 {

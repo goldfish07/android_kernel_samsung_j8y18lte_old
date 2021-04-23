@@ -117,6 +117,7 @@
 		battery,standard_curr = <1602>;
 		battery,expired_time = <11400>;    /* 130min + 60min margin */
 		battery,recharging_expired_time = <5400>;
+		battery,battery_full_capacity = <2600>;
 				
 		battery,swelling_high_temp_block = <410>;
 		battery,swelling_high_temp_recov = <390>;
@@ -227,6 +228,7 @@
 			fuelgauge,capacity_max = <1000>;
 			fuelgauge,capacity_max_margin = <70>;
 			fuelgauge,capacity_min = <0>;
+			fuelgauge,capacity_full = <2600>;
 			fuelgauge,capacity_calculation_type = <0x1F>;
 		};
 	};

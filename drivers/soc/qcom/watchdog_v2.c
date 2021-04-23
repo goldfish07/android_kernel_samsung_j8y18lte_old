@@ -304,6 +304,9 @@ static void pet_watchdog(struct msm_watchdog_data *wdog_dd)
 #ifdef CONFIG_SEC_DEBUG
 	sec_debug_save_last_pet(time_ns);
 #endif
+#ifdef CONFIG_SEC_DEBUG_PWDT
+	sec_debug_check_pwdt();
+#endif
 }
 
 static void keep_alive_response(void *info)

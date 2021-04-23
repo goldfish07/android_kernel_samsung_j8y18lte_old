@@ -5,6 +5,7 @@
 ifeq ($(CONFIG_MUIC_S2MU004),y)
 	obj-y				+= muic_core.o s2mu004-muic.o s2mu004-muic-sysfs.o
 	obj-$(CONFIG_CCIC_NOTIFIER)		+= muic_manager.o
+	obj-$(CONFIG_USB_EXTERNAL_NOTIFY)	+= muic_usb_notification_manager.o
 else
 	obj-y				+= muic-core.o
 #	obj-$(CONFIG_MUIC_SUPPORT_CCIC)	+= universal/muic_ccic.o

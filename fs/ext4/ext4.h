@@ -1697,7 +1697,7 @@ static inline int ext4_encrypted_inode(struct inode *inode)
 /*
  * Default reserved inode count
  */
-#define EXT4_DEF_RESERVE_INODE 4096
+#define EXT4_DEF_RESERVE_INODE 8192
 #define EXT4_SEC_DATA_MAGIC 0xBAB0CAFE /* data partition magic */
 
 /*

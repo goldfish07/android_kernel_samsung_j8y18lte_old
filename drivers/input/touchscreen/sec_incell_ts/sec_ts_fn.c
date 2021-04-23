@@ -842,6 +842,16 @@ static void fw_update(void *device_data)
 		return;
 	}
 
+#ifdef CONFIG_SAMSUNG_PRODUCT_SHIP
+	if (sec->cmd_param[0] == 1) {
+		snprintf(buff, sizeof(buff), "%s", "OK");
+		sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+		sec->cmd_state = SEC_CMD_STATUS_OK;
+		input_info(true, &ts->client->dev, "%s: success [%d]\n", __func__, retval);
+		return;
+	}
+#endif
+
 	retval = sec_ts_firmware_update_on_hidden_menu(ts, sec->cmd_param[0]);
 	if (retval < 0) {
 		snprintf(buff, sizeof(buff), "%s", "NA");
@@ -3874,16 +3884,19 @@ static void check_connection(void *device_data)
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 	char *rbuff;
-	u8 type = TYPE_OFFSET_DATA_SDC;
 	u8 selftest_type = TYPE_SELFTEST_OPEN_DATA;
 	short min, max;
 	int i;
-	int ret;
+	int readbytes;
+	int ret, retry = 0;
 	char rwbuf[2];
+	u8 tpara[3] = {1, 0x00 | selftest_type, 0x03};
+	u8 tBuff[SEC_TS_EVENT_BUFF_SIZE] = {0,};
 
 	sec_cmd_set_default_result(sec);
 
-	rbuff = kzalloc(ts->tx_count * ts->rx_count * 2, GFP_KERNEL);
+	readbytes = ts->tx_count * ts->rx_count * 2;
+	rbuff = kzalloc(readbytes, GFP_KERNEL);
 	if (!rbuff)
 		goto error_alloc_mem;
 
@@ -3893,6 +3906,8 @@ static void check_connection(void *device_data)
 		goto error_power_state;
 	}
 
+	disable_irq(ts->client->irq);
+
 	ret = sec_ts_fix_tmode(ts, TOUCH_SYSTEM_MODE_TOUCH, TOUCH_MODE_STATE_TOUCH);
 	if (ret < 0) {
 		input_err(true, &ts->client->dev, "%s: failed to fix tmode\n",
@@ -3900,16 +3915,62 @@ static void check_connection(void *device_data)
 		goto error_test_fail;
 	}
 
-	ret = sec_ts_selftest_read_frame(ts, type, &min, &max, selftest_type);
+	input_info(true, &ts->client->dev, "%s: run open test!\n", __func__);
+
+	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SELFTEST_CHOICE, tpara, 2);
 	if (ret < 0) {
-		input_err(true, &ts->client->dev, "%s: failed to read frame\n",
-				__func__);
-		goto error_selftest_fail;
+		input_err(true, &ts->client->dev, "%s: Send selftest cmd failed!\n", __func__);
+		goto error_test_fail;
 	}
 
-	for (i = 0; i < ts->tx_count * ts->rx_count; i++)
-		if (ts->pFrame[i] != 0)
-			goto error_selftest_fail;
+	sec_ts_delay(50);
+
+	ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SELFTEST, &tpara[2], 1);
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: Send selftest cmd failed!\n", __func__);
+		goto error_test_fail;
+	}
+
+	while (ts->sec_ts_i2c_read(ts, SEC_TS_READ_ONE_EVENT, tBuff, SEC_TS_EVENT_BUFF_SIZE)) {
+		if ((((tBuff[0] >> 2) & 0xF) == TYPE_STATUS_EVENT_VENDOR_INFO)
+			&& (tBuff[1] == SEC_TS_VENDOR_ACK_SELF_TEST_DONE))
+			break;
+
+		if (retry++ > SEC_TS_WAIT_RETRY_CNT) {
+			input_err(true, &ts->client->dev, "%s: Time Over\n", __func__);
+			goto error_test_fail;
+		}
+		sec_ts_delay(20);
+	}
+
+	if (tBuff[2] != 0) {
+		input_err(true, &ts->client->dev, "%s: open test fail! [%02X]", __func__, tBuff[2]);
+
+		/* read data */
+		rwbuf[0] = 5;
+		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SELFTEST_READ, &rwbuf[0], 1);
+		if (ret < 0) {
+			input_err(true, &ts->client->dev, "%s: Set selftest_read failed\n", __func__);
+			goto error_test_fail;
+		}
+
+		ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_SELFTEST_READ, rbuff, readbytes);
+		if (ret < 0) {
+			input_err(true, &ts->client->dev, "%s: read rawdata failed!\n", __func__);
+			goto error_test_fail;
+		}
+
+		memset(ts->pFrame, 0x00, readbytes);
+
+		for (i = 0; i < readbytes; i += 2)
+			ts->pFrame[i / 2] = rbuff[i] + (rbuff[i + 1] << 8);
+
+		min = max = ts->pFrame[0];
+
+		sec_ts_print_frame(ts, &min, &max, selftest_type);
+
+		goto error_test_fail;
+	}
 
 	ret = sec_ts_release_tmode(ts);
 	if (ret < 0) {
@@ -3917,6 +3978,8 @@ static void check_connection(void *device_data)
 				__func__);
 		goto error_selftest_fail;
 	}
+
+	enable_irq(ts->client->irq);
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -3939,6 +4002,7 @@ error_selftest_fail:
 	}
 
 error_test_fail:
+	enable_irq(ts->client->irq);
 error_power_state:
 	kfree(rbuff);
 error_alloc_mem:

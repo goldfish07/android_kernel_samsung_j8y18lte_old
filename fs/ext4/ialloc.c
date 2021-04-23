@@ -24,7 +24,6 @@
 #include <linux/blkdev.h>
 #include <asm/byteorder.h>
 #include <linux/ratelimit.h>
-#include <linux/android_aid.h>
 
 #include "ext4.h"
 #include "ext4_jbd2.h"
@@ -119,16 +118,16 @@ ext4_read_inode_bitmap(struct super_block *sb, ext4_group_t block_group)
 	}
 
 	ext4_lock_group(sb, block_group);
- 	if (ext4_has_group_desc_csum(sb) &&
- 	    (desc->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT))) {
- 		if (block_group == 0) {
- 			ext4_unlock_group(sb, block_group);
- 			unlock_buffer(bh);
- 			ext4_error(sb, "Inode bitmap for bg 0 marked "
- 				   "uninitialized");
- 			put_bh(bh);
- 			return NULL;
- 		}
+	if (ext4_has_group_desc_csum(sb) &&
+	    (desc->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT))) {
+		if (block_group == 0) {
+			ext4_unlock_group(sb, block_group);
+			unlock_buffer(bh);
+			ext4_error(sb, "Inode bitmap for bg 0 marked "
+				   "uninitialized");
+			put_bh(bh);
+			return NULL;
+		}
 		memset(bh->b_data, 0, (EXT4_INODES_PER_GROUP(sb) + 7) / 8);
 		ext4_mark_bitmap_end(EXT4_INODES_PER_GROUP(sb),
 				     sb->s_blocksize * 8, bh->b_data);
@@ -691,18 +690,13 @@ out:
 static inline int ext4_has_free_inodes(struct ext4_sb_info *sbi)
 {
 	if (likely(percpu_counter_read_positive(&sbi->s_freeinodes_counter) >
-			sbi->s_r_inodes_count * 2))
-		return 1;
-
-	if (percpu_counter_read_positive(&sbi->s_freeinodes_counter) >
-			sbi->s_r_inodes_count &&
-			in_group_p(AID_USE_SEC_RESERVED))
+			sbi->s_r_inodes_count))
 		return 1;
 
 	/* Hm, nope.  Are (enough) root reserved inodes available? */
 	if (uid_eq(sbi->s_resuid, current_fsuid()) ||
 	    (!gid_eq(sbi->s_resgid, GLOBAL_ROOT_GID) && in_group_p(sbi->s_resgid)) ||
-	    capable(CAP_SYS_RESOURCE) || in_group_p(AID_USE_ROOT_RESERVED))
+	    capable(CAP_SYS_RESOURCE))
 		return 1;
 	return 0;
 }
@@ -932,8 +926,8 @@ got:
 
 		/* recheck and clear flag under lock if we still need to */
 		ext4_lock_group(sb, group);
-       if (ext4_has_group_desc_csum(sb) &&
-           (gdp->bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT))) {	
+		if (ext4_has_group_desc_csum(sb) &&
+		    (gdp->bg_flags & cpu_to_le16(EXT4_BG_BLOCK_UNINIT))) {
 			gdp->bg_flags &= cpu_to_le16(~EXT4_BG_BLOCK_UNINIT);
 			ext4_free_group_clusters_set(sb, gdp,
 				ext4_free_clusters_after_init(sb, group, gdp));
@@ -1111,7 +1105,7 @@ fail_drop:
 	unlock_new_inode(inode);
 out:
 	if (err == -ENOSPC) {
-		printk_ratelimited(KERN_INFO "Return ENOSPC : No free inode (%d/%u)\n",
+		printk_ratelimited(KERN_INFO "Return ENOSPC: ifree=%d, inodes=%u\n",
 			(int) percpu_counter_read_positive(&sbi->s_freeinodes_counter),
 			le32_to_cpu(sbi->s_es->s_inodes_count));
 	}

@@ -2193,6 +2193,7 @@ static int read_gen2_pon_off_reason(struct qpnp_pon *pon, u16 *reason,
 static int qpnp_wake_enabled(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
+	int old_val = wake_enabled;
 	struct qpnp_pon_config *cfg;
 
 	ret = param_set_bool(val, kp);
@@ -2200,6 +2201,9 @@ static int qpnp_wake_enabled(const char *val, const struct kernel_param *kp)
 		pr_err("Unable to set qpnp_wake_enabled: %d\n", ret);
 		return ret;
 	}
+
+	if (old_val == wake_enabled)
+		return ret;
 
 	cfg = qpnp_get_cfg(sys_reset_dev, PON_KPDPWR);
 	if (!cfg) {
@@ -2212,7 +2216,8 @@ static int qpnp_wake_enabled(const char *val, const struct kernel_param *kp)
 	else
 		enable_irq_wake(cfg->state_irq);
 
-	pr_info("%s: wake_enabled = %d\n", KBUILD_MODNAME, wake_enabled);
+	pr_info("%s: wake_enabled changed [%d -> %d]\n",
+			__func__, old_val, wake_enabled);
 
 	return ret;
 }

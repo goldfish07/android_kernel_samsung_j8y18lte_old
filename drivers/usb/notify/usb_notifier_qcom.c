@@ -49,10 +49,6 @@ extern void dwc3_max_speed_setting(int speed);
 
 extern void set_ncm_ready(bool ready);
 
-#if defined(CONFIG_MUIC_SM570X_SWITCH_CONTROL_GPIO)
-extern int muic_GPIO_control(int gpio);
-#endif
-
 #if defined(CONFIG_CCIC_NOTIFIER)
 int is_host;
 #endif
@@ -135,10 +131,6 @@ static int ccic_usb_handle_notification(struct notifier_block *nb,
 #if defined(CONFIG_CCIC_ALTERNATE_MODE) && defined(CONFIG_USB_DWC3)
 			dwc3_max_speed_setting(usb_status.sub3);
 #endif
-#if defined(CONFIG_MUIC_SM570X_SWITCH_CONTROL_GPIO)
-/* set USB_ID pin high to let MUIC doesn't do BC1.2 charging when OTG connected*/
-			muic_GPIO_control(1);
-#endif
 			send_otg_notify(o_notify, NOTIFY_EVENT_HOST, 1);
 			is_host = 1;
 			break;
@@ -154,9 +146,6 @@ static int ccic_usb_handle_notification(struct notifier_block *nb,
 		case USB_STATUS_NOTIFY_DETACH:
 			if(is_host) {
 				pr_info("%s: Turn Off Host(DFP)\n", __func__);
-#if defined(CONFIG_MUIC_SM570X_SWITCH_CONTROL_GPIO)
-				muic_GPIO_control(0);
-#endif
 				send_otg_notify(o_notify, NOTIFY_EVENT_HOST, 0);
 				is_host = 0;
 			} else {

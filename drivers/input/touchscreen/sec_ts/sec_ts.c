@@ -3137,7 +3137,7 @@ out:
 static int sec_ts_pm_suspend(struct device *dev)
 {
 	struct sec_ts_data *ts = dev_get_drvdata(dev);
-#ifdef USE_OPEN_CLOSE
+#if 0
 	int retval;
 
 	if (ts->input_dev) {

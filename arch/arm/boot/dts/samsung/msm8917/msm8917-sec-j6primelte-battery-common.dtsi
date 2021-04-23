@@ -90,6 +90,8 @@
 		battery,recharging_expired_time = <5400>;
 		battery,standard_curr = <1034>; /* IP < CP */
 
+		battery,battery_full_capacity = <5000>;
+
 		battery,swelling_high_temp_block = <410>;
 		battery,swelling_high_temp_recov = <390>;
 

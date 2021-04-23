@@ -132,7 +132,7 @@ int alarm_set_alarm(char *alarm_data)
 {
 	struct rtc_wkalrm alm;
 	int ret = 0;
-	char buf_ptr[BOOTALM_BIT_TOTAL+1];
+	char buf_ptr[BOOTALM_BIT_TOTAL+1] = {0,};
 	struct rtc_time     rtc_tm;
 	unsigned long       rtc_sec;
 	unsigned long       rtc_alm_sec;
@@ -997,7 +997,8 @@ static int alarm_timer_nsleep(const clockid_t which_clock, int flags,
 	/* Convert (if necessary) to absolute time */
 	if (flags != TIMER_ABSTIME) {
 		ktime_t now = alarm_bases[type].gettime();
-		exp = ktime_add(now, exp);
+
+		exp = ktime_add_safe(now, exp);
 	}
 
 	if (alarmtimer_do_nsleep(&alarm, exp))

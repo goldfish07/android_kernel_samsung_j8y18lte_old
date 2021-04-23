@@ -583,6 +583,7 @@ enum {
 	CISD_WIRE_COUNT,
 #endif	
 	FG_DUMP,
+	BATT_CURRENT_EVENT,
 };
 
 enum {

@@ -31,6 +31,11 @@ enum muic_op_mode {
 	OPMODE_CCIC = 1<<0,
 };
 
+enum {
+	CCIC_RPRD_STATE	= 1,
+	CCIC_POWERROLE_STATE	=2,
+};
+
 /* Slave addr = 0x4A: MUIC */
 enum ioctl_cmd {
 	GET_COM_VAL = 0x01,
@@ -214,7 +219,7 @@ struct muic_interface_t {
 	bool			is_ccic_otg;
 
 	int				ccic_rp;
-
+	int			powerrole_state;
 	struct hv_data		*phv;
 
 #if defined(CONFIG_USB_EXTERNAL_NOTIFY)

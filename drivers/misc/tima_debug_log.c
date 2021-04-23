@@ -14,6 +14,8 @@
 #include <linux/rkp_entry.h>
 #endif
 
+extern int tima_debug_modify_kernel(const char *val, struct kernel_param *kp);
+
 #if defined(CONFIG_ARCH_MSM8953) && !defined(CONFIG_ARCH_MSM8917)
 #define DEBUG_LOG_START (0x85C00000)
 #elif defined(CONFIG_ARCH_MSM8917)
@@ -53,6 +55,9 @@ unsigned long *tima_debug_log_addr = 0;
 unsigned long *tima_debug_rkp_log_addr = 0;
 unsigned long *tima_secure_rkp_log_addr = 0;
 #endif
+
+/* leave the following definithion of module param call here for the compatibility with other models */
+module_param_call(force_modify, tima_debug_modify_kernel, NULL, NULL, 0644);
 
 ssize_t	tima_read(struct file *filep, char __user *buf, size_t size, loff_t *offset)
 {

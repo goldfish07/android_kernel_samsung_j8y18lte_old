@@ -9,9 +9,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-
-#ifndef __SS_DSI_POC_H__
-#define __SS_DSI_POC_H__
+#ifndef SAMSUNG_POC_COMMON_H
+#define SAMSUNG_POC_COMMON_H
 
 #include <linux/kernel.h>
 #include <linux/poll.h>
@@ -20,16 +19,22 @@
 #include <linux/file.h>
 #include <linux/err.h>
 #include <linux/mutex.h>
+#include <linux/vmalloc.h>
 
-#ifdef CONFIG_SUPPORT_POC_2_0
-#define POC_IMG_SIZE    (546008)
-#else
-#define POC_IMG_SIZE    (532816)
+#define POC_IMG_ADDR		(0x000000)
+#define POC_ERASE_SECTOR	(4096)
+#define POC_ERASE_32KB		(32768)
+#define POC_ERASE_64KB		(65536)
+
+#define DEBUG_POC_CNT 4096
+
+enum FLASH_READ_CASE {
+	READ_CASE1,
+	READ_CASE2,
+	NONE_CASE,
+};
+
+int ss_dsi_poc_init(struct samsung_display_driver_data *vdd);
+void ss_poc_read_mca(struct samsung_display_driver_data *vdd);
+void ss_poc_comp(struct samsung_display_driver_data *vdd);
 #endif
-
-#define POC_IMG_ADDR	(0x000000)
-#define POC_PAGE		(4096)
-#define POC_TEST_PATTERN_SIZE	(1024)
-
-#endif
-//__POC_H__

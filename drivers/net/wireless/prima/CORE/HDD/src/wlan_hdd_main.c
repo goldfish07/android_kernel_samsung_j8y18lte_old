@@ -196,6 +196,7 @@ static struct attribute_group sec_sysfs_attr_group = {
 void sec_sysfs_create(void);
 void sec_sysfs_destroy(void);
 tSirVersionString sec_versionString;
+extern tANI_U8 sec_softapinfoString[256];
 #endif /* SEC_READ_MACADDR_SYSFS || SEC_WRITE_VERSION_IN_SYSFS || SEC_WRITE_SOFTAP_INFO_IN_SYSFS */
 #endif
 
@@ -3449,12 +3450,17 @@ static int hdd_cmd_setFccChannel(hdd_context_t *pHddCtx, tANI_U8 *cmd,
 {
     tANI_U8 *value;
     tANI_U8 fcc_constraint;
+    uint8_t input_value;
 
     eHalStatus status;
     int ret = 0;
     value =  cmd + cmd_len + 1;
 
-    ret = kstrtou8(value, 10, &fcc_constraint);
+    ret = kstrtos8(value, 10, &input_value);
+    fcc_constraint = input_value ? 1 : 0;
+    hddLog(VOS_TRACE_LEVEL_ERROR, "input_value = %d && fcc_constraint = %d",
+		  input_value, fcc_constraint);
+
     if ((ret < 0) || (fcc_constraint > 1)) {
        /*
         *  If the input value is greater than max value of datatype,
@@ -3888,8 +3894,11 @@ int hdd_parse_disable_chan_cmd(hdd_adapter_t *adapter, tANI_U8 *ptr)
 mem_alloc_failed:
 	mutex_unlock(&hdd_ctx->cache_channel_lock);
         /* Disable the channels received in command SET_DISABLE_CHANNEL_LIST*/
-        wlan_hdd_disable_channels(hdd_ctx);
-        hdd_check_and_disconnect_sta_on_invalid_channel(hdd_ctx);
+	if (!is_command_repeated) {
+		wlan_hdd_disable_channels(hdd_ctx);
+		hdd_check_and_disconnect_sta_on_invalid_channel(hdd_ctx);
+	}
+
 	
 	EXIT();
 
@@ -9544,7 +9553,7 @@ void hdd_deinit_adapter( hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter, tANI_U
          }
 
          hdd_cleanup_actionframe(pHddCtx, pAdapter);
-
+         pr_err("debug: Unregister the hostapd timers");
          hdd_unregister_hostapd(pAdapter, rtnl_held);
          /* set con_mode to STA only when no SAP concurrency mode */
          if (!(hdd_get_concurrency_mode() & (VOS_SAP | VOS_P2P_GO)))
@@ -10641,6 +10650,10 @@ VOS_STATUS hdd_stop_adapter( hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter,
          break;
 
       case WLAN_HDD_SOFTAP:
+          /* Delete all associated STAs before stopping AP */
+          if (test_bit(SOFTAP_BSS_STARTED, &pAdapter->event_flags))
+               hdd_del_all_sta(pAdapter);
+          /* Fall through */	  
       case WLAN_HDD_P2P_GO:
           if ( VOS_TRUE == bCloseSession )
           {
@@ -12839,12 +12852,12 @@ void cnss_read_roam_cable(void)
 
 	if (!np) {
 		printk(KERN_INFO "[WIFI] %s : cannot find the wcnss_cable\n",__FUNCTION__);
-		return;
+		goto exit;
 	}
 	fp = filp_open(filepath, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
 	if (IS_ERR(fp)) {
 		printk("[WIFI] %s: cannot create a file\n", filepath);
-		return;
+		goto exit;
 	}
 	wifi_cable = of_get_named_gpio(np, "wlan_cable_wifi", 0);
 
@@ -12858,6 +12871,7 @@ void cnss_read_roam_cable(void)
 	}
 	printk(KERN_INFO "[WIFI] %s : gpio=%d value = %d \n",__FUNCTION__, wifi_cable, gpio_get_value(wifi_cable)); 
 
+exit:
 	if (fp)
 		filp_close(fp, NULL);
 	set_fs(oldfs);
@@ -15037,12 +15051,9 @@ static ssize_t show_verinfo(struct kobject *kobj,
 {
 	ssize_t ret_val = 0;
 
-	/* Check whether driver inited and load unload is in progress */
-	if (!vos_is_load_unload_in_progress(VOS_MODULE_ID_VOSS, NULL)) {
-		vos_ssr_protect(__func__);
-		ret_val = __show_verinfo(kobj, attr, buf);
-		vos_ssr_unprotect(__func__);
-	}
+	vos_ssr_protect(__func__);
+	ret_val = __show_verinfo(kobj, attr, buf);
+	vos_ssr_unprotect(__func__);
 
 	return ret_val;
 }
@@ -15051,20 +15062,8 @@ static ssize_t __show_softapinfo(struct kobject *kobj,
 				 struct kobj_attribute *attr,
 				 char *buf)
 {
-	hdd_context_t *pHddCtx;
-
-    pHddCtx = vos_get_context(VOS_MODULE_ID_HDD,
-                              vos_get_global_context(VOS_MODULE_ID_HDD, NULL));
-
 	return scnprintf(buf, PAGE_SIZE,
-		"#softap.info\nDualBandConcurrency=%s\n5G=%s\nmaxClient=%d\nHalFn_setCountryCodeHal=%s\nHalFn_getValidChannels=%s\nDualInterface=%s\n",
-        "no",
-        pHddCtx->cfg_ini->nBandCapability ? "no" : "yes",		
-        (WLAN_MAX_STA_COUNT > 10) ? 10 : WLAN_MAX_STA_COUNT,
-        "yes",
-        "yes",
-        "yes"
-		);
+			   "%s\n", sec_softapinfoString);
 }
 
 static ssize_t show_softapinfo(struct kobject *kobj,
@@ -15073,12 +15072,9 @@ static ssize_t show_softapinfo(struct kobject *kobj,
 {
 	ssize_t ret_val = 0;
 
-	/* Check whether driver inited and load unload is in progress */
-	if (!vos_is_load_unload_in_progress(VOS_MODULE_ID_VOSS, NULL)) {
-		vos_ssr_protect(__func__);
-		ret_val = __show_softapinfo(kobj, attr, buf);
-		vos_ssr_unprotect(__func__);
-	}
+	vos_ssr_protect(__func__);
+	ret_val = __show_softapinfo(kobj, attr, buf);
+	vos_ssr_unprotect(__func__);
 
 	return ret_val;
 }
@@ -16169,6 +16165,8 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
    hdd_context_t *hdd_ctx = NULL;
    hdd_adapter_t *adapter = NULL;
    v_CONTEXT_t vos_context = NULL;
+   struct ieee80211_mgmt *mgmt =
+           (struct ieee80211_mgmt *)frame_ind->frameBuf;
 
    /* Get the global VOSS context.*/
    vos_context = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
@@ -16184,6 +16182,12 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
    {
        return;
    }
+
+   if (frame_ind->frameLen < ieee80211_hdrlen(mgmt->frame_control)) {
+        hddLog(LOGE, FL(" Invalid frame length"));
+        return;
+   }
+
    adapter = hdd_get_adapter_by_sme_session_id(hdd_ctx,
                                           frame_ind->sessionId);
 

@@ -263,13 +263,8 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_IST30XXH) += tsp_imagis/ist3038h_j2y18.fw  \
 					tsp_imagis/ist3038h_j2y18_octa_cmcs.bin
 endif
 
-ifeq ($(CONFIG_ARCH_MSM8917),y)
-fw-shipped-$(CONFIG_FIVE_TEE_DRIVER) += msm8917/five.b00 msm8917/five.b01 msm8917/five.b02 \
-					msm8917/five.b03 msm8917/five.b04 msm8917/five.b05 \
-					msm8917/five.b06 msm8917/five.mdt
-else
-fw-shipped-$(CONFIG_FIVE_TEE_DRIVER) += five.b00 five.b01 five.b02 five.b03 \
-				  five.b04 five.b05 five.b06 five.mdt
+ifeq ($(CONFIG_FIVE_TEE_DRIVER),y)
+include $(srctree)/firmware/five/Makefile
 endif
 
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)

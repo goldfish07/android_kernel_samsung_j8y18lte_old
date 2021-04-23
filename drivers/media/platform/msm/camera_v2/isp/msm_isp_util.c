@@ -1029,8 +1029,6 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 	case MSM_SD_UNNOTIFY_FREEZE:
 		break;
 	case MSM_SD_SHUTDOWN:
-		while (vfe_dev->vfe_open_cnt != 0)
-			msm_isp_close_node(sd, NULL);
 		break;
 
 	default:

@@ -58,6 +58,7 @@ static enum power_supply_property sm5703_fuelgauge_props[] = {
 	POWER_SUPPLY_PROP_ENERGY_FULL,
 	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	POWER_SUPPLY_PROP_CHARGE_COUNTER,
 };
 
 static inline int sm5703_fg_read_device(struct i2c_client *client,
@@ -1672,6 +1673,9 @@ bool sec_hal_fg_get_property(struct i2c_client *client,
 			/* SM5703 does not support this property */
 			val->intval = sm5703_fg_get_batt_present(client);
 			break;
+		case POWER_SUPPLY_PROP_CHARGE_COUNTER:
+		    val->intval = fuelgauge->capacity_full * fuelgauge->raw_capacity;
+		    break;
 		case POWER_SUPPLY_PROP_INPUT_VOLTAGE_REGULATION:
 			val->intval =
 				sm5703_fg_get_jig_mode_real_vbat(fuelgauge->client);
@@ -1752,7 +1756,8 @@ static int sm5703_fg_get_property(struct power_supply *psy,
 				val->intval = 1000;
 			if (val->intval < 0)
 				val->intval = 0;
-
+			
+	        fuelgauge->raw_capacity = val->intval; 
 			/* get only integer part */
 			val->intval /= 10;
 
@@ -2144,6 +2149,11 @@ static int fuelgauge_parse_dt(struct device *dev,
 			__func__, fuelgauge->pdata->capacity_min);
 		if (ret < 0)
 			pr_err("%s error reading capacity_min %d\n", __func__, ret);
+		
+		ret = of_property_read_u32(np, "fuelgauge,capacity_full",
+				&fuelgauge->capacity_full);
+		if (ret < 0)
+			pr_err("%s error reading capacity_full %d\n", __func__, ret);
 
 		ret = of_property_read_u32(np, "fuelgauge,capacity_calculation_type",
 				&pdata->capacity_calculation_type);

@@ -86,6 +86,7 @@ enum pon_restart_reason {
    /* don't use betwwen PON_RESTART_REASON_RORY_START */
    /*   & PON_RESTART_REASON_RORY_END */
 	PON_RESTART_REASON_RORY_END		= 0x2A,
+	PON_RESTART_REASON_CROSS_FAIL		= 0x2C,
 /***********************************************/
 	PON_RESTART_REASON_DBG_LOW		= 0x30,
 	PON_RESTART_REASON_DBG_MID		= 0x31,

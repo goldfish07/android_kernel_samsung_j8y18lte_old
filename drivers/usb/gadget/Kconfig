@@ -203,6 +203,9 @@ config USB_F_AUDIO_SRC
 config USB_F_ACC
 	tristate
 
+config USB_F_IPC
+	tristate
+
 choice
 	tristate "USB Gadget Drivers"
 	default USB_ETH
@@ -425,6 +428,7 @@ config USB_G_ANDROID
 	select USB_F_UAC1 if SND_PCM
 	select USB_F_UAC2 if SND_PCM
 	select USB_F_UVC if MEDIA_SUPPORT
+	select USB_F_IPC
 	help
 	  The Android Composite Gadget supports multiple USB
 	  functions: adb, acm, mass storage, mtp, accessory
@@ -458,6 +462,12 @@ config USB_ANDROID_SAMSUNG_MTP
 		for samsung gadget driver.
 		If you enable this option,
 		google mtp will be changed to samsung mtp.
+
+config USB_F_CONN_GADGET_NDOP
+	bool "Conn gadget that do not support DexLive"
+	depends on USB_G_ANDROID
+	help
+		Next SideSync
 
 config USB_ANDROID_SAMSUNG_SIDESYNC
 	boolean "Samsung SideSync function"

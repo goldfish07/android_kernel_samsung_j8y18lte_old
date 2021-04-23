@@ -88,6 +88,8 @@
 #define DEV_TYPE3_CHG_TYPE	(DEV_TYPE3_U200_CHG | DEV_TYPE3_NO_STD_CHG)
 #endif
 
+extern int muic_get_otg_property(void);
+
 static struct vps_cfg cfg_MHL = {
 	.name = "MHL",
 	.attr = MATTR(VCOM_OPEN, VB_ANY),
@@ -843,7 +845,7 @@ static int resolve_dedicated_dev(muic_data_t *pmuic, muic_attached_dev_t *pdev, 
 			is_UPSM = is_blocked(o_notify, NOTIFY_BLOCK_TYPE_ALL) || is_blocked(o_notify, NOTIFY_BLOCK_TYPE_HOST);
 			if (muic_get_current_legacy_dev(pmuic) == ATTACHED_DEV_OTG_MUIC) {
 				pr_info("%s : OTG DETECTED (%d)\n", __func__, is_UPSM);
-				if (!is_UPSM) {
+				if ((!is_UPSM) && (vbvolt) && (muic_get_otg_property() == 1) ) {
 					pr_info("%s : reset vbus path\n", __func__);
 					pvendor->reset_vbus_path(pmuic->regmapdesc);
 				}
